@@ -30,3 +30,8 @@ This is a starter project for building React Native apps with [Expo](https://exp
 ## Functions
 - User authentication (login, logout, register) with Roble
 - Product management (create, update, delete) with Roble
+
+## For developing, start as a Docker container with the next commands
+docker build -t rn-expo-app .
+
+docker run --rm -it --name rn-expo-app `  -p 19000:19000 -p 19001:19001 -p 19002:19002 -p 8081:8081 -p 19006:19006 `  -e ROBLE_PROJECT_ID=tu_project_id `  -e REACT_NATIVE_PACKAGER_HOSTNAME=host.docker.internal `  -v "${PWD}:/app" -v /app/node_modules `  rn-expo-app
