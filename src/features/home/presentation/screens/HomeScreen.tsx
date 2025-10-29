@@ -1,75 +1,141 @@
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Avatar, Card, Paragraph, Title, useTheme } from "react-native-paper";
+import { Card, Text, useTheme } from "react-native-paper";
+
+interface MenuCardProps {
+  title: string;
+  subtitle: string;
+  icon: string;
+  onPress: () => void;
+}
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
 
+  const MenuCard = ({ title, subtitle, icon, onPress }: MenuCardProps) => (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.cardWrapper}>
+      <Card style={styles.menuCard} mode="elevated">
+        <Card.Content style={styles.menuCardContent}>
+          <View style={[styles.iconBox, { backgroundColor: theme.colors.secondaryContainer }]}>
+            <Text style={styles.iconText}>{icon}</Text>
+          </View>
+          <View style={styles.textBox}>
+            <Text style={styles.menuTitle} numberOfLines={1}>{title}</Text>
+            <Text style={styles.menuSubtitle} numberOfLines={2}>{subtitle}</Text>
+          </View>
+        </Card.Content>
+      </Card>
+    </TouchableOpacity>
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerWrap}>
-        <Title style={styles.title}>Student Eval</Title>
+    <ScrollView style={styles.container}>
+      <Text style={styles.header}>Student Eval</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Módulo de profesores</Text>
+        <View style={styles.grid}>
+          <MenuCard
+            icon="📚"
+            title="Ver mis cursos"
+            subtitle="Administrar y crear cursos"
+            onPress={() => navigation.navigate("TeacherCourses")}
+          />
+          <MenuCard
+            icon="📊"
+            title="Reporte de cursos"
+            subtitle="Ver reportes y estadísticas"
+            onPress={() => {}}
+          />
+        </View>
       </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate("TeacherCourses")}>
-        <Card style={styles.card} mode="elevated">
-          <Card.Content style={styles.cardContent}>
-            <Avatar.Icon size={40} icon="book" style={{ backgroundColor: theme.colors.secondary }} />
-            <View style={{ marginLeft: 12 }}>
-              <Title style={styles.cardTitle}>Módulo de profesores</Title>
-              <Paragraph style={styles.cardSubtitle}>Ver mis cursos</Paragraph>
-            </View>
-          </Card.Content>
-        </Card>
-      </TouchableOpacity>
-
-      <Card style={styles.card} mode="elevated">
-        <Card.Content style={styles.cardContent}>
-          <Avatar.Icon size={40} icon="file-chart" style={{ backgroundColor: theme.colors.surface }} />
-          <View style={{ marginLeft: 12 }}>
-            <Title style={styles.cardTitle}>Reporte de cursos</Title>
-            <Paragraph style={styles.cardSubtitle}>Ver reportes y estadísticas</Paragraph>
-          </View>
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.card} mode="elevated">
-        <Card.Content style={styles.cardContent}>
-          <Avatar.Icon size={40} icon="account-group" style={{ backgroundColor: theme.colors.surface }} />
-          <View style={{ marginLeft: 12 }}>
-            <Title style={styles.cardTitle}>Módulo de estudiantes</Title>
-            <Paragraph style={styles.cardSubtitle}>Mis cursos / Mis actividades</Paragraph>
-          </View>
-        </Card.Content>
-      </Card>
-
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Módulo de estudiantes</Text>
+        <View style={styles.grid}>
+          <MenuCard
+            icon="📖"
+            title="Mis cursos"
+            subtitle="Ver cursos donde está inscrito"
+            onPress={() => {}}
+          />
+          <MenuCard
+            icon="📝"
+            title="Mis actividades"
+            subtitle="Ver tareas y actividades"
+            onPress={() => {}}
+          />
+        </View>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
   },
-  headerWrap: {
-    alignItems: "center",
-    marginBottom: 12,
+  header: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 32,
+    color: '#000',
   },
-  title: {
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
     fontSize: 20,
+    fontWeight: '500',
+    marginBottom: 16,
+    color: '#000',
   },
-  card: {
-    marginBottom: 12,
+  grid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  menuCard: {
+    elevation: 2,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    minHeight: 140,
+  },
+  menuCardContent: {
+    padding: 16,
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
+  iconText: {
+    fontSize: 24,
   },
-  cardTitle: {
+  textBox: {
+    flex: 1,
+  },
+  menuTitle: {
     fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#000',
   },
-  cardSubtitle: {
-    fontSize: 12,
-    color: "gray",
+  menuSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
   },
 });

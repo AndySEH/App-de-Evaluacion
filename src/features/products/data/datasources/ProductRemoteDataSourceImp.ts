@@ -29,6 +29,12 @@ export class ProductRemoteDataSourceImp implements ProductDataSource {
     retry = true
   ): Promise<Response> {
     const token = await this.prefs.retrieveData<string>("token");
+    if (!token) {
+      await this.prefs.removeData("token");
+      await this.prefs.removeData("refreshToken");
+      throw new Error("No authentication token available");
+    }
+
     const headers = {
       ...(options.headers || {}),
       Authorization: `Bearer ${token}`,
@@ -37,12 +43,21 @@ export class ProductRemoteDataSourceImp implements ProductDataSource {
     const response = await fetch(url, { ...options, headers });
 
     if (response.status === 401 && retry) {
-      console.warn("401 detected, trying to refresh token…");
+      console.warn("401 detected, checking refresh token availability...");
       try {
+        const refreshToken = await this.prefs.retrieveData<string>("refreshToken");
+        if (!refreshToken) {
+          await this.prefs.removeData("token");
+          await this.prefs.removeData("refreshToken");
+          throw new Error("No refresh token available");
+        }
+
         const refreshed = await this.authService.refreshToken();
         if (refreshed) {
-          // retry with new token
           const newToken = await this.prefs.retrieveData<string>("token");
+          if (!newToken) {
+            throw new Error("Token refresh failed");
+          }
           const retryHeaders = {
             ...(options.headers || {}),
             Authorization: `Bearer ${newToken}`,
@@ -50,8 +65,10 @@ export class ProductRemoteDataSourceImp implements ProductDataSource {
           return await fetch(url, { ...options, headers: retryHeaders });
         }
       } catch (e) {
-        console.error("Token refresh failed, forcing logout", e);
-        // Here you might trigger logout context/state
+        console.error("Authentication failed, clearing tokens", e);
+        await this.prefs.removeData("token");
+        await this.prefs.removeData("refreshToken");
+        throw e;
       }
     }
 
