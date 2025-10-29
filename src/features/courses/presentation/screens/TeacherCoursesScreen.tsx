@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
-import { Card, FAB, IconButton, Paragraph, useTheme, Text } from "react-native-paper";
-import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { AuthRemoteDataSourceImpl } from "@/src/features/auth/data/datasources/AuthRemoteDataSourceImp";
+import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { CourseRemoteDataSourceImp } from "@/src/features/courses/data/datasources/CourseRemoteDataSourceImp";
 import { CourseRepositoryImpl } from "@/src/features/courses/data/repositories/CourseRepositoryImpl";
 import { Course } from "@/src/features/courses/domain/entities/Course";
+import React, { useEffect, useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
+import { Card, FAB, IconButton, Paragraph, Text, useTheme } from "react-native-paper";
 
 export default function TeacherCoursesScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
