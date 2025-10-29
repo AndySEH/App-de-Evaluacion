@@ -19,6 +19,23 @@ const Tab = createBottomTabNavigator();
 export default function AuthFlow() {
   const { isLoggedIn, logout } = useAuth();
 
+  if (!isLoggedIn) {
+    return (
+      <Stack.Navigator>
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen} 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Signup" 
+          component={SignupScreen}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
+    );
+  }
+
   function ContentTabs() {
     return (
       <Tab.Navigator

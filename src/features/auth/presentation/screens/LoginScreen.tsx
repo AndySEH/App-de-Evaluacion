@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Button, Surface, Text, TextInput } from "react-native-paper";
 import { useAuth } from "../context/authContext";
 
-
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -49,15 +48,18 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         onPress={handleLogin}
         loading={loading}
         disabled={loading}
-        style={{ marginBottom: 10 }}
+        style={{ marginBottom: 12 }}
       >
         Log In
       </Button>
 
-      <Button mode="text" onPress={() => navigation.navigate('Signup')}>
-        Don’t have an account? Sign Up
+      <Button
+        mode="text"
+        onPress={() => navigation.navigate('Signup')}
+        style={{ marginBottom: 10 }}
+      >
+        Don't have an account? Sign Up
       </Button>
-
     </Surface>
   );
 }
