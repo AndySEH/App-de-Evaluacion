@@ -31,6 +31,9 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         const refreshToken = data["refreshToken"];
         await this.prefs.storeData("token", token);
         await this.prefs.storeData("refreshToken", refreshToken);
+        // store user info if returned by the API, otherwise persist email as minimal info
+        const serverUser = data["user"] ?? { email };
+        await this.prefs.storeData("user", serverUser);
         console.log("Token:", token, "\nRefresh Token:", refreshToken);
         return Promise.resolve();
       } else {
@@ -128,6 +131,10 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         const data = await response.json();
         const newToken = data["accessToken"];
         await this.prefs.storeData("token", newToken);
+        // if API returns updated user info, persist it as well
+        if (data["user"]) {
+          await this.prefs.storeData("user", data["user"]);
+        }
         console.log("Token refreshed successfully");
         return true;
       } else {
@@ -171,5 +178,13 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       console.error("Verify token failed", e);
       return false;
     }
+  }
+
+  // Expose stored auth info (user + tokens) for consumers that need raw data
+  async getStoredAuthInfo(): Promise<{ user: any | null; token: string | null; refreshToken: string | null }> {
+    const user = await this.prefs.retrieveData<any>("user");
+    const token = await this.prefs.retrieveData<string>("token");
+    const refreshToken = await this.prefs.retrieveData<string>("refreshToken");
+    return { user, token, refreshToken };
   }
 }
