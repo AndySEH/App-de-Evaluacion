@@ -5,16 +5,19 @@ import AuthFlow from "./src/AuthFlow";
 
 import { DIProvider } from "./src/core/di/DIProvider";
 import { AuthProvider } from "./src/features/auth/presentation/context/authContext";
+import { CourseProvider } from "./src/features/courses/presentation/context/courseContext";
 import { ProductProvider } from "./src/features/products/presentation/context/productContext";
 import { darkTheme, lightTheme } from "./src/theme/theme";
 
 
 
 export default function App() {
-  const scheme = useColorScheme();
-  const theme = scheme === "dark" ? darkTheme : lightTheme;
-  console.log("Current theme:", scheme);
-  //console.log("Using theme:", theme);
+  console.log("App component rendering...");
+  try {
+    const scheme = useColorScheme();
+    const theme = scheme === "dark" ? darkTheme : lightTheme;
+    console.log("Current theme:", scheme);
+    //console.log("Using theme:", theme);
 
   const navigationTheme = {
     ...(scheme === "dark" ? DarkTheme : DefaultTheme),
@@ -29,19 +32,23 @@ export default function App() {
     },
   };
 
-  return (
-
-    <PaperProvider theme={theme}>
-      <DIProvider>
-        <AuthProvider>
-          <ProductProvider>
-            <NavigationContainer theme={navigationTheme}>
-              <AuthFlow />
-            </NavigationContainer>
-          </ProductProvider>
-        </AuthProvider>
-      </DIProvider>
-    </PaperProvider>
-
-  );
+    return (
+      <PaperProvider theme={theme}>
+        <DIProvider>
+          <AuthProvider>
+            <ProductProvider>
+              <CourseProvider>
+                <NavigationContainer theme={navigationTheme}>
+                  <AuthFlow />
+                </NavigationContainer>
+              </CourseProvider>
+            </ProductProvider>
+          </AuthProvider>
+        </DIProvider>
+      </PaperProvider>
+    );
+  } catch (error) {
+    console.error("Error in App component:", error);
+    return null;
+  }
 }

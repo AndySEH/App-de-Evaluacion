@@ -8,6 +8,11 @@ import { GetCurrentUserUseCase } from "@/src/features/auth/domain/usecases/GetCu
 import { LoginUseCase } from "@/src/features/auth/domain/usecases/LoginUseCase";
 import { LogoutUseCase } from "@/src/features/auth/domain/usecases/LogoutUseCase";
 import { SignupUseCase } from "@/src/features/auth/domain/usecases/SignupUseCase";
+import { CourseRemoteDataSourceImp } from "@/src/features/courses/data/datasources/CourseRemoteDataSourceImp";
+import { CourseRepositoryImpl } from "@/src/features/courses/data/repositories/CourseRepositoryImpl";
+import { AddCourseUseCase } from "@/src/features/courses/domain/usecases/AddCourseUseCase";
+import { GetCourseByIdUseCase } from "@/src/features/courses/domain/usecases/GetCourseByIdUseCase";
+import { GetCoursesByTeacherUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByTeacherUseCase";
 import { ProductRemoteDataSourceImp } from "@/src/features/products/data/datasources/ProductRemoteDataSourceImp";
 import { ProductRepositoryImpl } from "@/src/features/products/data/repositories/ProductRepositoryImpl";
 import { AddProductUseCase } from "@/src/features/products/domain/usecases/AddProductUseCase";
@@ -39,13 +44,21 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
         const productRepo = new ProductRepositoryImpl(remoteDS);
 
         c.register(TOKENS.ProductRemoteDS, remoteDS)
-            .register(TOKENS.ProductRepo, productRepo).register(TOKENS.AddProductUC, new AddProductUseCase(productRepo))
+            .register(TOKENS.ProductRepo, productRepo)
+            .register(TOKENS.AddProductUC, new AddProductUseCase(productRepo))
             .register(TOKENS.UpdateProductUC, new UpdateProductUseCase(productRepo))
             .register(TOKENS.DeleteProductUC, new DeleteProductUseCase(productRepo))
             .register(TOKENS.GetProductsUC, new GetProductsUseCase(productRepo))
             .register(TOKENS.GetProductByIdUC, new GetProductByIdUseCase(productRepo));
 
+        const courseRemoteDS = new CourseRemoteDataSourceImp(authDS);
+        const courseRepo = new CourseRepositoryImpl(courseRemoteDS);
 
+        c.register(TOKENS.CourseRemoteDS, courseRemoteDS)
+            .register(TOKENS.CourseRepo, courseRepo)
+            .register(TOKENS.GetCoursesByTeacherUC, new GetCoursesByTeacherUseCase(courseRepo))
+            .register(TOKENS.GetCourseByIdUC, new GetCourseByIdUseCase(courseRepo))
+            .register(TOKENS.AddCourseUC, new AddCourseUseCase(courseRepo));
 
         return c;
     }, []);
