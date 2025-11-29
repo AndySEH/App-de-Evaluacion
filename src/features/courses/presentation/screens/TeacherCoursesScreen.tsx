@@ -1,19 +1,14 @@
 import { AuthRemoteDataSourceImpl } from "@/src/features/auth/data/datasources/AuthRemoteDataSourceImp";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
-import { CourseRemoteDataSourceImp } from "@/src/features/courses/data/datasources/CourseRemoteDataSourceImp";
-import { CourseRepositoryImpl } from "@/src/features/courses/data/repositories/CourseRepositoryImpl";
-import { Course } from "@/src/features/courses/domain/entities/Course";
-import React, { useEffect, useState } from "react";
+import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
+import { useEffect } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Card, FAB, IconButton, Paragraph, Text, useTheme } from "react-native-paper";
 
 export default function TeacherCoursesScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
   const { user } = useAuth();
-
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { courses, isLoading, error, getCoursesByTeacher } = useCourses();
 
   useEffect(() => {
     let mounted = true;
@@ -37,36 +32,21 @@ export default function TeacherCoursesScreen({ navigation }: { navigation: any }
         return;
       }
 
-      setLoading(true);
-      setError(null);
+      // Prefer UID when available (backend uses UID as teacher identifier). Fall back to common id fields or email.
+      const teacherId = effectiveUser.uid ?? effectiveUser.id ?? effectiveUser._id ?? effectiveUser.email;
+
+      // Log the filters and start (also indicate which field was used)
+      const usedIdField = effectiveUser.uid ? 'uid' : effectiveUser.id ? 'id' : effectiveUser._id ? '_id' : 'email';
+      console.log('[TeacherCoursesScreen] Fetching courses for teacher', { teacherId, usedIdField, table: 'CourseModel' });
+
+      const start = Date.now();
+      await getCoursesByTeacher(teacherId);
+      const duration = Date.now() - start;
+
+      // Log the response (count + preview)
       try {
-        const authRemote = new AuthRemoteDataSourceImpl();
-        const courseRemote = new CourseRemoteDataSourceImp(authRemote);
-        const repo = new CourseRepositoryImpl(courseRemote);
-
-  // Prefer UID when available (backend uses UID as teacher identifier). Fall back to common id fields or email.
-  const teacherId = effectiveUser.uid ?? effectiveUser.id ?? effectiveUser._id ?? effectiveUser.email;
-
-  // Log the filters and start (also indicate which field was used)
-  const usedIdField = effectiveUser.uid ? 'uid' : effectiveUser.id ? 'id' : effectiveUser._id ? '_id' : 'email';
-  console.log('[TeacherCoursesScreen] Fetching courses for teacher', { teacherId, usedIdField, table: 'CourseModel' });
-
-        const start = Date.now();
-        const list = await repo.getCoursesByTeacher(teacherId);
-        const duration = Date.now() - start;
-
-        // Log the response (count + preview)
-        try {
-          console.log('[TeacherCoursesScreen] Received courses', { count: list?.length ?? 0, durationMs: duration, sample: (list || []).slice(0,5) });
-        } catch {}
-
-        if (mounted) setCourses(list || []);
-      } catch (e: any) {
-        console.error("Error loading courses", e);
-        if (mounted) setError(e.message || "Error cargando cursos");
-      } finally {
-        if (mounted) setLoading(false);
-      }
+        console.log('[TeacherCoursesScreen] Received courses', { count: courses?.length ?? 0, durationMs: duration, sample: (courses || []).slice(0,5) });
+      } catch {}
     };
 
     load();
@@ -106,7 +86,7 @@ export default function TeacherCoursesScreen({ navigation }: { navigation: any }
           );
         }}
         contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={!loading ? <Text style={{ padding: 16, color: 'gray' }}>No hay cursos</Text> : null}
+        ListEmptyComponent={!isLoading ? <Text style={{ padding: 16, color: 'gray' }}>No hay cursos</Text> : null}
       />
 
       <FAB

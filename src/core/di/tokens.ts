@@ -12,5 +12,9 @@ export const TOKENS = {
   DeleteProductUC: Symbol("DeleteProductUC"),
   GetProductsUC: Symbol("GetProductsUC"),
   GetProductByIdUC: Symbol("GetProductByIdUC"),
-  // Add Product tokens if you want to DI those too...
+  CourseRemoteDS: Symbol("CourseRemoteDS"),
+  CourseRepo: Symbol("CourseRepo"),
+  GetCoursesByTeacherUC: Symbol("GetCoursesByTeacherUC"),
+  GetCourseByIdUC: Symbol("GetCourseByIdUC"),
+  AddCourseUC: Symbol("AddCourseUC"),
 } as const;
