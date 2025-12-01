@@ -31,8 +31,8 @@ import { GroupRemoteDataSourceImp } from "@/src/features/courses/data/datasource
 import { GroupRepositoryImpl } from "@/src/features/courses/data/repositories/GroupRepositoryImpl";
 import { AddGroupUseCase } from "@/src/features/courses/domain/usecases/AddGroupUseCase";
 import { DeleteGroupUseCase } from "@/src/features/courses/domain/usecases/DeleteGroupUseCase";
-import { GetGroupsByCategoryUseCase } from "@/src/features/courses/domain/usecases/GetGroupsByCategoryUseCase";
 import { GetGroupByIdUseCase } from "@/src/features/courses/domain/usecases/GetGroupByIdUseCase";
+import { GetGroupsByCategoryUseCase } from "@/src/features/courses/domain/usecases/GetGroupsByCategoryUseCase";
 import { UpdateGroupUseCase } from "@/src/features/courses/domain/usecases/UpdateGroupUseCase";
 
 // Activities

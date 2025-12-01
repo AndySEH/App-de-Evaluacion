@@ -1,4 +1,4 @@
-import { PeerEvaluation, NewPeerEvaluation } from "../../domain/entities/PeerEvaluation";
+import { NewPeerEvaluation, PeerEvaluation } from "../../domain/entities/PeerEvaluation";
 import { PeerEvaluationRepository } from "../../domain/repositories/PeerEvaluationRepository";
 import { PeerEvaluationDataSource } from "../datasources/PeerEvaluationDataSource";
 

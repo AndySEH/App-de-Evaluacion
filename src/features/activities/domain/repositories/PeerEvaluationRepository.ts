@@ -1,4 +1,4 @@
-import { PeerEvaluation, NewPeerEvaluation } from "../entities/PeerEvaluation";
+import { NewPeerEvaluation, PeerEvaluation } from "../entities/PeerEvaluation";
 
 export interface PeerEvaluationRepository {
   getPeerEvaluationsByAssessment(assessmentId: string): Promise<PeerEvaluation[]>;

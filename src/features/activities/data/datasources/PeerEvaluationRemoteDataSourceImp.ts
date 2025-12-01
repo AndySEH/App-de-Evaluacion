@@ -1,7 +1,7 @@
 import { ILocalPreferences } from "@/src/core/iLocalPreferences";
 import { LocalPreferencesAsyncStorage } from "@/src/core/LocalPreferencesAsyncStorage";
 import { AuthRemoteDataSourceImpl } from "@/src/features/auth/data/datasources/AuthRemoteDataSourceImp";
-import { PeerEvaluation, NewPeerEvaluation } from "../../domain/entities/PeerEvaluation";
+import { NewPeerEvaluation, PeerEvaluation } from "../../domain/entities/PeerEvaluation";
 import { PeerEvaluationDataSource } from "./PeerEvaluationDataSource";
 
 export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSource {
