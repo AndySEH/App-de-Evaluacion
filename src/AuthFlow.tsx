@@ -1,7 +1,6 @@
 import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
-import { IconButton } from "react-native-paper";
 
 import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";

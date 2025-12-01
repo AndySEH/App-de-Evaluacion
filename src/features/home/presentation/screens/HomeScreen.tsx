@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Avatar, Card, FAB, IconButton, Text, useTheme } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Card, FAB, Text, useTheme } from "react-native-paper";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
