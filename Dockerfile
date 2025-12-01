@@ -11,15 +11,16 @@ RUN npm i -g @expo/ngrok@^4.1.0
 
 WORKDIR /app
 
+# Solo copiamos package.json para aprovechar el cache de Docker
 COPY package*.json ./
 RUN npm ci
 
-COPY . .
+# No copiamos el código aquí - se montará como volumen para hot reload
 
 ENV NODE_ENV=development \
-    EXPO_NO_TELEMETRY=1 \
-    CHOKIDAR_USEPOLLING=1 \
-    WATCHPACK_POLLING=true
+  EXPO_NO_TELEMETRY=1 \
+  CHOKIDAR_USEPOLLING=1 \
+  WATCHPACK_POLLING=true
 
 EXPOSE 8081 19000 19001 19002 19006
 
