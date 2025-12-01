@@ -22,11 +22,13 @@ services:
     environment:
       - NODE_ENV=development
       - EXPO_NO_TELEMETRY=1
-      - CHOKIDAR_USEPOLLING=1
+      - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
       - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.1
     stdin_open: true
     tty: true
+    command: sh -c "npx expo start --host lan --clear"
     networks:
       - app-network
 
