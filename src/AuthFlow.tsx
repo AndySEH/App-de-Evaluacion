@@ -8,8 +8,6 @@ import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
 import NotificationsScreen from "./features/notifications/NotificationsScreen";
-import AddProductScreen from "./features/products/presentation/screens/AddProductScreen";
-import UpdateProductScreen from "./features/products/presentation/screens/UpdateProductScreen";
 import SettingScreen from "./features/settings/SettingScreen";
 
 
@@ -88,31 +86,13 @@ export default function AuthFlow() {
         <>
           <Stack.Screen name="App" component={ContentTabs} />
           <Stack.Screen
-            name="AddProductScreen"
-            component={AddProductScreen}
+            name="TeacherCourses"
+            component={TeacherCoursesScreen}
             options={{
-              title: "Add Product",
+              title: "Mis Cursos",
               headerShown: true,
-              presentation: 'modal' // Optional: makes it slide up from bottom
             }}
           />
-          <Stack.Screen
-            name="UpdateProductScreen"
-            component={UpdateProductScreen}
-            options={{
-              title: "Update Product",
-              headerShown: true,
-              presentation: 'modal' // Optional: makes it slide up from bottom
-            }}
-          />
-            <Stack.Screen
-              name="TeacherCourses"
-              component={TeacherCoursesScreen}
-              options={{
-                title: "Mis Cursos",
-                headerShown: true,
-              }}
-            />
         </>
       ) : (
         <>
