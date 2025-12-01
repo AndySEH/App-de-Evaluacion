@@ -61,34 +61,44 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
   }
 
   async getGroupsByCategory(categoryId: string): Promise<Group[]> {
+    console.log('[API] GET Groups by Category - Params:', { categoryId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&categoryId=${encodeURIComponent(categoryId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Groups by Category - Error:', response.status, errorBody);
       if (response.status === 401) throw new Error("Unauthorized");
       throw new Error(`Error fetching groups: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Groups by Category - Result:', data);
     return data as Group[];
   }
 
   async getGroupById(id: string): Promise<Group | undefined> {
+    console.log('[API] GET Group by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: Group[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Group by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Group by ID - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Group by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addGroup(group: NewGroup): Promise<void> {
+    console.log('[API] POST Add Group - Params:', { group, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [group] });
 
@@ -98,13 +108,21 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 201) {
+      console.log('[API] POST Add Group - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Group - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Group - Error:', response.status, errorBody);
     throw new Error(`Error adding group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updateGroup(id: string, updates: Partial<Group>): Promise<void> {
+    console.log('[API] PUT Update Group - Params:', { id, updates, table: this.table });
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -119,13 +137,21 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       body,
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] PUT Update Group - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] PUT Update Group - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] PUT Update Group - Error:', response.status, errorBody);
     throw new Error(`Error updating group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async deleteGroup(id: string): Promise<void> {
+    console.log('[API] DELETE Group - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
@@ -137,9 +163,16 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       }),
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] DELETE Group - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] DELETE Group - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] DELETE Group - Error:', response.status, errorBody);
     throw new Error(`Error deleting group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

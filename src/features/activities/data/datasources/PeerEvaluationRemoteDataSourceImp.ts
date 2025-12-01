@@ -61,34 +61,44 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
   }
 
   async getPeerEvaluationsByAssessment(assessmentId: string): Promise<PeerEvaluation[]> {
+    console.log('[API] GET Peer Evaluations by Assessment - Params:', { assessmentId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&assessmentId=${encodeURIComponent(assessmentId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Peer Evaluations by Assessment - Error:', response.status, errorBody);
       if (response.status === 401) throw new Error("Unauthorized");
       throw new Error(`Error fetching peer evaluations: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Peer Evaluations by Assessment - Result:', data);
     return data as PeerEvaluation[];
   }
 
   async getPeerEvaluationById(id: string): Promise<PeerEvaluation | undefined> {
+    console.log('[API] GET Peer Evaluation by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: PeerEvaluation[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Peer Evaluation by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Peer Evaluation by ID - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Peer Evaluation by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching peer evaluation: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addPeerEvaluation(peerEvaluation: NewPeerEvaluation): Promise<void> {
+    console.log('[API] POST Add Peer Evaluation - Params:', { peerEvaluation, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [peerEvaluation] });
 
@@ -98,13 +108,21 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 201) {
+      console.log('[API] POST Add Peer Evaluation - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Peer Evaluation - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Peer Evaluation - Error:', response.status, errorBody);
     throw new Error(`Error adding peer evaluation: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updatePeerEvaluation(id: string, updates: Partial<PeerEvaluation>): Promise<void> {
+    console.log('[API] PUT Update Peer Evaluation - Params:', { id, updates, table: this.table });
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -119,13 +137,21 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
       body,
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] PUT Update Peer Evaluation - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] PUT Update Peer Evaluation - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] PUT Update Peer Evaluation - Error:', response.status, errorBody);
     throw new Error(`Error updating peer evaluation: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async deletePeerEvaluation(id: string): Promise<void> {
+    console.log('[API] DELETE Peer Evaluation - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
@@ -137,9 +163,16 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
       }),
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] DELETE Peer Evaluation - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] DELETE Peer Evaluation - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] DELETE Peer Evaluation - Error:', response.status, errorBody);
     throw new Error(`Error deleting peer evaluation: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

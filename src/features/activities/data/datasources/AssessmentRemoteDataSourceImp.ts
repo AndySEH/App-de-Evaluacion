@@ -61,34 +61,44 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
   }
 
   async getAssessmentsByActivity(activityId: string): Promise<Assessment[]> {
+    console.log('[API] GET Assessments by Activity - Params:', { activityId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&activityId=${encodeURIComponent(activityId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Assessments by Activity - Error:', response.status, errorBody);
       if (response.status === 401) throw new Error("Unauthorized");
       throw new Error(`Error fetching assessments: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Assessments by Activity - Result:', data);
     return data as Assessment[];
   }
 
   async getAssessmentById(id: string): Promise<Assessment | undefined> {
+    console.log('[API] GET Assessment by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: Assessment[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Assessment by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Assessment by ID - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Assessment by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching assessment: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addAssessment(assessment: NewAssessment): Promise<void> {
+    console.log('[API] POST Add Assessment - Params:', { assessment, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [assessment] });
 
@@ -98,13 +108,21 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 201) {
+      console.log('[API] POST Add Assessment - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Assessment - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Assessment - Error:', response.status, errorBody);
     throw new Error(`Error adding assessment: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updateAssessment(id: string, updates: Partial<Assessment>): Promise<void> {
+    console.log('[API] PUT Update Assessment - Params:', { id, updates, table: this.table });
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -119,13 +137,21 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
       body,
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] PUT Update Assessment - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] PUT Update Assessment - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] PUT Update Assessment - Error:', response.status, errorBody);
     throw new Error(`Error updating assessment: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async deleteAssessment(id: string): Promise<void> {
+    console.log('[API] DELETE Assessment - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
@@ -137,9 +163,16 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
       }),
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] DELETE Assessment - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] DELETE Assessment - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] DELETE Assessment - Error:', response.status, errorBody);
     throw new Error(`Error deleting assessment: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

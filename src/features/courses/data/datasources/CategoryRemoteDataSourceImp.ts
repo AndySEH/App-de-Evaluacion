@@ -61,34 +61,44 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
   }
 
   async getCategoriesByCourse(courseId: string): Promise<Category[]> {
+    console.log('[API] GET Categories by Course - Params:', { courseId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&courseId=${encodeURIComponent(courseId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Categories by Course - Error:', response.status, errorBody);
       if (response.status === 401) throw new Error("Unauthorized");
       throw new Error(`Error fetching categories: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Categories by Course - Result:', data);
     return data as Category[];
   }
 
   async getCategoryById(id: string): Promise<Category | undefined> {
+    console.log('[API] GET Category by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: Category[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Category by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Category by ID - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Category by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addCategory(category: NewCategory): Promise<void> {
+    console.log('[API] POST Add Category - Params:', { category, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [category] });
 
@@ -98,13 +108,21 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 201) {
+      console.log('[API] POST Add Category - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Category - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Category - Error:', response.status, errorBody);
     throw new Error(`Error adding category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updateCategory(id: string, updates: Partial<Category>): Promise<void> {
+    console.log('[API] PUT Update Category - Params:', { id, updates, table: this.table });
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -119,13 +137,21 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       body,
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] PUT Update Category - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] PUT Update Category - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] PUT Update Category - Error:', response.status, errorBody);
     throw new Error(`Error updating category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async deleteCategory(id: string): Promise<void> {
+    console.log('[API] DELETE Category - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
@@ -137,9 +163,16 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       }),
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] DELETE Category - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] DELETE Category - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] DELETE Category - Error:', response.status, errorBody);
     throw new Error(`Error deleting category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

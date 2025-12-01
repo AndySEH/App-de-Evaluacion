@@ -61,34 +61,43 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
   }
 
   async getActivitiesByCourse(courseId: string): Promise<Activity[]> {
+    console.log('[API] GET Activities by Course - Params:', { courseId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&courseId=${encodeURIComponent(courseId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      console.error('[API] GET Activities by Course - Error:', response.status);
       if (response.status === 401) throw new Error("Unauthorized");
       throw new Error(`Error fetching activities: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Activities by Course - Result:', data);
     return data as Activity[];
   }
 
   async getActivityById(id: string): Promise<Activity | undefined> {
+    console.log('[API] GET Activity by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: Activity[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Activity by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Activity by ID - Error: Unauthorized');
       throw new Error("Unauthorized");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Activity by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching activity: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addActivity(activity: NewActivity): Promise<void> {
+    console.log('[API] POST Add Activity - Params:', { activity, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [activity] });
 
@@ -98,13 +107,21 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 201) {
+      console.log('[API] POST Add Activity - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Activity - Error: Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Activity - Error:', response.status, errorBody);
     throw new Error(`Error adding activity: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updateActivity(id: string, updates: Partial<Activity>): Promise<void> {
+    console.log('[API] PUT Update Activity - Params:', { id, updates, table: this.table });
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -119,13 +136,21 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
       body,
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] PUT Update Activity - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] PUT Update Activity - Error: Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] PUT Update Activity - Error:', response.status, errorBody);
     throw new Error(`Error updating activity: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async deleteActivity(id: string): Promise<void> {
+    console.log('[API] DELETE Activity - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
@@ -137,9 +162,16 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
       }),
     });
 
-    if (response.status === 200) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized");
+    if (response.status === 200) {
+      console.log('[API] DELETE Activity - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] DELETE Activity - Error: Unauthorized');
+      throw new Error("Unauthorized");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] DELETE Activity - Error:', response.status, errorBody);
     throw new Error(`Error deleting activity: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

@@ -102,35 +102,45 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
   }
 
   async getCoursesByTeacher(teacherId: string): Promise<Course[]> {
+    console.log('[API] GET Courses by Teacher - Params:', { teacherId, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&teacherId=${encodeURIComponent(teacherId)}`;
 
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Courses by Teacher - Error:', response.status, errorBody);
       if (response.status === 401) throw new Error("Unauthorized (token issue)");
       throw new Error(`Error fetching courses: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[API] GET Courses by Teacher - Result:', data);
     return data as Course[];
   }
 
   async getCourseById(id: string): Promise<Course | undefined> {
+    console.log('[API] GET Course by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
       const data: Course[] = await response.json();
-      return data.length > 0 ? data[0] : undefined;
+      const result = data.length > 0 ? data[0] : undefined;
+      console.log('[API] GET Course by ID - Result:', result);
+      return result;
     } else if (response.status === 401) {
+      console.error('[API] GET Course by ID - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized (token issue)");
     } else {
       const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Course by ID - Error:', response.status, errorBody);
       throw new Error(`Error fetching course by id: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
     }
   }
 
   async addCourse(course: Course): Promise<void> {
+    console.log('[API] POST Add Course - Params:', { course, table: this.table });
     const url = `${this.baseUrl}/insert`;
 
     const body = JSON.stringify({ tableName: this.table, records: [course] });
@@ -141,9 +151,16 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
       body,
     });
 
-    if (response.status === 201) return Promise.resolve();
-    if (response.status === 401) throw new Error("Unauthorized (token issue)");
+    if (response.status === 201) {
+      console.log('[API] POST Add Course - Result: Success');
+      return Promise.resolve();
+    }
+    if (response.status === 401) {
+      console.error('[API] POST Add Course - Error:', response.status, 'Unauthorized');
+      throw new Error("Unauthorized (token issue)");
+    }
     const errorBody = await response.json().catch(() => ({}));
+    console.error('[API] POST Add Course - Error:', response.status, errorBody);
     throw new Error(`Error adding course: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }
