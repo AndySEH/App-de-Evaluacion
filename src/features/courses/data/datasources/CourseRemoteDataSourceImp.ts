@@ -119,6 +119,48 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
     return data as Course[];
   }
 
+  async getCoursesByStudent(studentId: string): Promise<Course[]> {
+    console.log('[API] GET Courses by Student - Params:', { studentId, table: this.table });
+    const url = `${this.baseUrl}/read?tableName=${this.table}`;
+    
+    const response = await this.authorizedFetch(url, { method: "GET" });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Courses by Student - Error:', response.status, errorBody);
+      if (response.status === 401) throw new Error("Unauthorized (token issue)");
+      throw new Error(`Error fetching courses: ${response.status}`);
+    }
+
+    const allCourses = await response.json() as Course[];
+    console.log('[API] GET Courses - Sample course structure:', allCourses[0]);
+    
+    // Filtrar cursos donde el studentId esté en el array studentIds
+    const studentCourses = allCourses.filter(course => {
+      // Convertir studentIds a array si es string
+      let studentIdsArray: string[] = [];
+      
+      if (Array.isArray(course.studentIds)) {
+        studentIdsArray = course.studentIds;
+      } else if (typeof course.studentIds === 'string') {
+        // Si es string, intentar parsearlo como JSON
+        try {
+          studentIdsArray = JSON.parse(course.studentIds);
+        } catch (e) {
+          // Si no es JSON válido, podría ser un string separado por comas
+          studentIdsArray = (course.studentIds as string).split(',').map((id: string) => id.trim());
+        }
+      } else if (course.studentIds && typeof course.studentIds === 'object') {
+        // Si es un objeto, obtener los valores
+        studentIdsArray = Object.values(course.studentIds);
+      }
+      
+      return studentIdsArray.includes(studentId);
+    });
+    console.log('[API] GET Courses by Student - Result:', studentCourses);
+    return studentCourses;
+  }
+
   async getCourseById(id: string): Promise<Course | undefined> {
     console.log('[API] GET Course by ID - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;

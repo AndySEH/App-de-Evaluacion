@@ -11,6 +11,7 @@ import { TOKENS } from "@/src/core/di/tokens";
 import { Course, NewCourse } from "@/src/features/courses/domain/entities/Course";
 import { AddCourseUseCase } from "../../domain/usecases/AddCourseUseCase";
 import { GetCourseByIdUseCase } from "../../domain/usecases/GetCourseByIdUseCase";
+import { GetCoursesByStudentUseCase } from "../../domain/usecases/GetCoursesByStudentUseCase";
 import { GetCoursesByTeacherUseCase } from "../../domain/usecases/GetCoursesByTeacherUseCase";
 
 type CourseContextType = {
@@ -20,7 +21,9 @@ type CourseContextType = {
   addCourse: (course: NewCourse) => Promise<void>;
   getCourse: (id: string) => Promise<Course | undefined>;
   getCoursesByTeacher: (teacherId: string) => Promise<void>;
-  refreshCourses: (teacherId: string) => Promise<void>;
+  getCoursesByStudent: (studentId: string) => Promise<void>;
+  getAllCourses: (userId: string) => Promise<void>;
+  refreshCourses: (userId: string) => Promise<void>;
 };
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
   const addCourseUC = di.resolve<AddCourseUseCase>(TOKENS.AddCourseUC);
   const getCourseByIdUC = di.resolve<GetCourseByIdUseCase>(TOKENS.GetCourseByIdUC);
   const getCoursesByTeacherUC = di.resolve<GetCoursesByTeacherUseCase>(TOKENS.GetCoursesByTeacherUC);
+  const getCoursesByStudentUC = di.resolve<GetCoursesByStudentUseCase>(TOKENS.GetCoursesByStudentUC);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,8 +53,56 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshCourses = async (teacherId: string) => {
-    await getCoursesByTeacher(teacherId);
+  const getCoursesByStudent = async (studentId: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const list = await getCoursesByStudentUC.execute(studentId);
+      setCourses(list);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getAllCourses = async (userId: string) => {
+    console.log('[CourseContext] getAllCourses called with userId:', userId);
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[CourseContext] Fetching courses...');
+      
+      // Obtener cursos como profesor y como estudiante
+      const [teacherCourses, studentCourses] = await Promise.all([
+        getCoursesByTeacherUC.execute(userId),
+        getCoursesByStudentUC.execute(userId),
+      ]);
+      
+      console.log('[CourseContext] Teacher courses:', teacherCourses);
+      console.log('[CourseContext] Student courses:', studentCourses);
+      
+      // Combinar y eliminar duplicados (por si acaso)
+      const allCourses = [...teacherCourses];
+      studentCourses.forEach(course => {
+        const exists = allCourses.some(c => (c._id || c.id) === (course._id || course.id));
+        if (!exists) {
+          allCourses.push(course);
+        }
+      });
+      
+      console.log('[CourseContext] Total courses:', allCourses.length, allCourses);
+      setCourses(allCourses);
+    } catch (e) {
+      console.error('[CourseContext] Error fetching courses:', e);
+      setError((e as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshCourses = async (userId: string) => {
+    await getAllCourses(userId);
   };
 
   const addCourse = async (course: NewCourse) => {
@@ -86,6 +138,8 @@ export function CourseProvider({ children }: { children: ReactNode }) {
       addCourse,
       getCourse,
       getCoursesByTeacher,
+      getCoursesByStudent,
+      getAllCourses,
       refreshCourses,
     }),
     [courses, isLoading, error]

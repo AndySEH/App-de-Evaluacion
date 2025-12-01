@@ -22,7 +22,9 @@ export class AuthRepositoryImpl implements AuthRepository {
   }
 
   async getCurrentUser(): Promise<AuthUser | null> {
-   // return this.dataSource.getCurrentUser();
-    return null;
+    console.log('[Repository] Getting current user from storage');
+    const authInfo = await this.dataSource.getStoredAuthInfo();
+    console.log('[Repository] Current user retrieved:', authInfo.user);
+    return authInfo.user;
   }
 }

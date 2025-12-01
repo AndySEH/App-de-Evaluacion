@@ -40,7 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    console.log('[AuthContext] Initializing - loading user from storage');
     getCurrentUserUseCase.execute().then((user: React.SetStateAction<AuthUser | null>) => {
+      console.log('[AuthContext] User loaded from storage:', user);
       setUser(user);
       setIsLoggedIn(!!user);
     });

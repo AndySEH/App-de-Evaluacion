@@ -11,10 +11,12 @@ const MAX_CONTENT_WIDTH = 600;
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
   const { user, logout } = useAuth();
-  const { courses, getCoursesByTeacher, isLoading } = useCourses();
+  const { courses, getAllCourses, isLoading } = useCourses();
   const [userName, setUserName] = useState("Usuario");
 
   useEffect(() => {
+    console.log('[HomeScreen] useEffect triggered - user:', user);
+    
     // Obtener nombre del usuario
     if (user?.name) {
       setUserName(user.name);
@@ -23,12 +25,60 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       setUserName(user.email.split('@')[0]);
     }
 
-    // Cargar cursos del usuario si es profesor
+    // Cargar TODOS los cursos del usuario (como profesor y como estudiante)
     if (user?.uid || user?.id || user?._id) {
       const userId = user.uid || user.id || user._id;
-      getCoursesByTeacher(userId);
+      console.log('[HomeScreen] Calling getAllCourses with userId:', userId);
+      getAllCourses(userId);
+    } else {
+      console.log('[HomeScreen] No user ID found, user object:', user);
     }
   }, [user]);
+
+  const isTeacher = (course: any) => {
+    const userId = user?.uid || user?.id || user?._id;
+    return course.teacherId === userId;
+  };
+
+  const isStudent = (course: any) => {
+    const userId = user?.uid || user?.id || user?._id;
+    
+    // Convertir studentIds a array si no lo es
+    let studentIdsArray: string[] = [];
+    
+    if (Array.isArray(course.studentIds)) {
+      studentIdsArray = course.studentIds;
+    } else if (typeof course.studentIds === 'string') {
+      try {
+        studentIdsArray = JSON.parse(course.studentIds);
+      } catch (e) {
+        studentIdsArray = (course.studentIds as string).split(',').map((id: string) => id.trim());
+      }
+    } else if (course.studentIds && typeof course.studentIds === 'object') {
+      studentIdsArray = Object.values(course.studentIds);
+    }
+    
+    return studentIdsArray.includes(userId);
+  };
+
+  const getStudentCount = (course: any) => {
+    if (course.studentsCount) return course.studentsCount;
+    
+    // Calcular a partir de studentIds
+    if (Array.isArray(course.studentIds)) {
+      return course.studentIds.length;
+    } else if (typeof course.studentIds === 'string') {
+      try {
+        return JSON.parse(course.studentIds).length;
+      } catch (e) {
+        return (course.studentIds as string).split(',').length;
+      }
+    } else if (course.studentIds && typeof course.studentIds === 'object') {
+      return Object.values(course.studentIds).length;
+    }
+    
+    return getRandomStudentsCount();
+  };
 
   const getCourseIcon = (index: number) => {
     const colors = ['#9C27B0', '#E91E63', '#00BCD4', '#4CAF50', '#FF9800'];
@@ -100,17 +150,24 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
                       {/* Información del curso */}
                       <View style={styles.courseInfo}>
                         <Text style={styles.courseTitle} numberOfLines={1}>
-                          {course.title}
+                          {course.name || course.title}
                         </Text>
-                        <View style={styles.roleBadge}>
-                          <MaterialCommunityIcons name="school-outline" size={14} color="#8B5CF6" />
-                          <Text style={styles.roleText}>Profesor</Text>
-                        </View>
+                        {isTeacher(course) ? (
+                          <View style={styles.roleBadge}>
+                            <MaterialCommunityIcons name="school-outline" size={14} color="#8B5CF6" />
+                            <Text style={styles.roleText}>Profesor</Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.roleBadge, styles.studentBadge]}>
+                            <MaterialCommunityIcons name="account-outline" size={14} color="#059669" />
+                            <Text style={[styles.roleText, styles.studentText]}>Estudiante</Text>
+                          </View>
+                        )}
                         <View style={styles.courseStats}>
                           <View style={styles.statItem}>
                             <MaterialCommunityIcons name="account-group" size={16} color="#6B6B6B" />
                             <Text style={styles.statText}>
-                              {course.studentsCount || getRandomStudentsCount()} estudiantes
+                              {getStudentCount(course)} estudiantes
                             </Text>
                           </View>
                           <View style={styles.statItem}>
@@ -124,7 +181,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
                     </View>
 
                     {/* Barra de progreso (solo si es estudiante) */}
-                    {course.showProgress && (
+                    {isStudent(course) && (
                       <View style={styles.progressContainer}>
                         <View style={styles.progressHeader}>
                           <Text style={styles.progressLabel}>Progreso</Text>
@@ -307,11 +364,17 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginBottom: 8,
   },
+  studentBadge: {
+    backgroundColor: '#D1FAE5',
+  },
   roleText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#8B5CF6',
     marginLeft: 4,
+  },
+  studentText: {
+    color: '#059669',
   },
   courseStats: {
     flexDirection: 'row',

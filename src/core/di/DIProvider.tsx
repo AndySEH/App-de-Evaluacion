@@ -15,6 +15,7 @@ import { CourseRemoteDataSourceImp } from "@/src/features/courses/data/datasourc
 import { CourseRepositoryImpl } from "@/src/features/courses/data/repositories/CourseRepositoryImpl";
 import { AddCourseUseCase } from "@/src/features/courses/domain/usecases/AddCourseUseCase";
 import { GetCourseByIdUseCase } from "@/src/features/courses/domain/usecases/GetCourseByIdUseCase";
+import { GetCoursesByStudentUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByStudentUseCase";
 import { GetCoursesByTeacherUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByTeacherUseCase";
 
 // Categories
@@ -87,6 +88,7 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
         c.register(TOKENS.CourseRemoteDS, courseRemoteDS)
             .register(TOKENS.CourseRepo, courseRepo)
             .register(TOKENS.GetCoursesByTeacherUC, new GetCoursesByTeacherUseCase(courseRepo))
+            .register(TOKENS.GetCoursesByStudentUC, new GetCoursesByStudentUseCase(courseRepo))
             .register(TOKENS.GetCourseByIdUC, new GetCourseByIdUseCase(courseRepo))
             .register(TOKENS.AddCourseUC, new AddCourseUseCase(courseRepo));
 

@@ -11,6 +11,7 @@ export const TOKENS = {
   CourseRemoteDS: Symbol("CourseRemoteDS"),
   CourseRepo: Symbol("CourseRepo"),
   GetCoursesByTeacherUC: Symbol("GetCoursesByTeacherUC"),
+  GetCoursesByStudentUC: Symbol("GetCoursesByStudentUC"),
   GetCourseByIdUC: Symbol("GetCourseByIdUC"),
   AddCourseUC: Symbol("AddCourseUC"),
 
