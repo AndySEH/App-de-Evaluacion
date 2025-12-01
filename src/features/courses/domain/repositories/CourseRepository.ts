@@ -1,4 +1,4 @@
-import { Course, NewCourse } from "../entities/Course";
+import { Course } from "../entities/Course";
 
 export interface CourseRepository {
   getCoursesByTeacher(teacherId: string): Promise<Course[]>;

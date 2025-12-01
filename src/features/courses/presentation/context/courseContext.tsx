@@ -1,9 +1,9 @@
 import {
-    createContext,
-    ReactNode,
-    useContext,
-    useMemo,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useMemo,
+  useState,
 } from "react";
 
 import { useDI } from "@/src/core/di/DIProvider";
