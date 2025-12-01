@@ -1,8 +1,8 @@
-import { useAuth } from "@/src/features/auth/presentation/context/authContext";
-import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { useDI } from "@/src/core/di/DIProvider";
 import { TOKENS } from "@/src/core/di/tokens";
 import { GetActivitiesCountByCourseUseCase } from "@/src/features/activities/domain/usecases/GetActivitiesCountByCourseUseCase";
+import { useAuth } from "@/src/features/auth/presentation/context/authContext";
+import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
