@@ -1,10 +1,13 @@
 
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Button, Surface, Text, TextInput } from "react-native-paper";
+import { StyleSheet, View } from "react-native";
+import { Button, Surface, Text, TextInput, useTheme } from "react-native-paper";
 import { useAuth } from "../context/authContext";
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const { login } = useAuth();
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,45 +24,186 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <Surface style={{ flex: 1, justifyContent: "center", padding: 20 }}>
-      <Text variant="headlineMedium" style={{ marginBottom: 20, textAlign: "center" }}>
-        Welcome! Please log in
-      </Text>
+    <Surface style={styles.container}>
+      <View style={styles.card}>
+        <View style={styles.contentContainer}>
+          {/* Logo Icon */}
+          <View style={styles.iconContainer}>
+            <MaterialCommunityIcons name="book-open-page-variant" size={48} color="#FFFFFF" />
+          </View>
 
-      <TextInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={{ marginBottom: 12 }}
-      />
+          {/* Title and Subtitle */}
+          <Text variant="headlineMedium" style={styles.title}>
+            Bienvenido
+          </Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            Inicia sesión para continuar
+          </Text>
 
-      <TextInput
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={true}
-        style={{ marginBottom: 20 }}
-      />
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <Text variant="bodyMedium" style={styles.label}>
+              Email
+            </Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="tu@email.com"
+              mode="flat"
+              style={styles.input}
+              underlineStyle={{ display: 'none' }}
+              contentStyle={styles.inputContent}
+            />
+          </View>
 
-      <Button
-        mode="contained"
-        onPress={handleLogin}
-        loading={loading}
-        disabled={loading}
-        style={{ marginBottom: 12 }}
-      >
-        Log In
-      </Button>
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <Text variant="bodyMedium" style={styles.label}>
+              Contraseña
+            </Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={true}
+              placeholder="••••••••"
+              mode="flat"
+              style={styles.input}
+              underlineStyle={{ display: 'none' }}
+              contentStyle={styles.inputContent}
+            />
+          </View>
 
-      <Button
-        mode="text"
-        onPress={() => navigation.navigate('Signup')}
-        style={{ marginBottom: 10 }}
-      >
-        Don't have an account? Sign Up
-      </Button>
+          {/* Forgot Password Link */}
+          <Button
+            mode="text"
+            onPress={() => {}}
+            style={styles.forgotButton}
+            labelStyle={styles.forgotButtonLabel}
+          >
+            ¿Olvidaste tu contraseña?
+          </Button>
+
+          {/* Login Button */}
+          <Button
+            mode="contained"
+            onPress={handleLogin}
+            loading={loading}
+            disabled={loading}
+            style={styles.loginButton}
+            labelStyle={styles.loginButtonLabel}
+            buttonColor="#1C1C1E"
+          >
+            Iniciar sesión
+          </Button>
+
+          {/* Signup Button */}
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('Signup')}
+            style={styles.signupButton}
+            labelStyle={styles.signupButtonLabel}
+          >
+            Registrarse
+          </Button>
+        </View>
+      </View>
     </Surface>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#E8EAF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 40,
+    maxWidth: 500,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  contentContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#5C6BC0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#6B6B6B',
+    marginBottom: 32,
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  label: {
+    color: '#1C1C1E',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#F0F0F5',
+    borderRadius: 12,
+  },
+  inputContent: {
+    backgroundColor: '#F0F0F5',
+    paddingHorizontal: 16,
+  },
+  forgotButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+  },
+  forgotButtonLabel: {
+    color: '#5C6BC0',
+    fontSize: 14,
+  },
+  loginButton: {
+    width: '100%',
+    borderRadius: 12,
+    paddingVertical: 6,
+  },
+  loginButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  signupButton: {
+    width: '100%',
+    marginTop: 24,
+    borderRadius: 12,
+    borderColor: '#5C6BC0',
+    paddingVertical: 6,
+  },
+  signupButtonLabel: {
+    color: '#5C6BC0',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
