@@ -55,6 +55,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               style={styles.input}
               underlineStyle={{ display: 'none' }}
               contentStyle={styles.inputContent}
+              textColor="#000000"
+              placeholderTextColor="#999999"
             />
           </View>
 
@@ -72,6 +74,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               style={styles.input}
               underlineStyle={{ display: 'none' }}
               contentStyle={styles.inputContent}
+              textColor="#000000ff"
+              placeholderTextColor="#999999"
             />
           </View>
 
