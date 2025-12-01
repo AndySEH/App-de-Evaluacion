@@ -11,13 +11,23 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Validaciones
+      if (!email || !password) {
+        setError("Por favor, ingresa tu email y contraseña");
+        return;
+      }
+
       await login(email, password);
     } catch (err) {
       console.error("Login failed", err);
+      setError("No se pudo iniciar sesión. Verifica tu email y contraseña.");
     } finally {
       setLoading(false);
     }
@@ -25,6 +35,14 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
   return (
     <Surface style={styles.container}>
+      {/* Error Message Box */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="alert-circle" size={20} color="#FFFFFF" />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       <View style={styles.card}>
         <View style={styles.contentContainer}>
           {/* Logo Icon */}
@@ -124,6 +142,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+  },
+  errorContainer: {
+    backgroundColor: '#DC3545',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    maxWidth: 500,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
   card: {
     backgroundColor: '#FFFFFF',

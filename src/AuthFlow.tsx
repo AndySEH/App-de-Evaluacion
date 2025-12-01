@@ -40,25 +40,31 @@ export default function AuthFlow() {
     return (
       <Tab.Navigator
         screenOptions={{
-          headerShown: true,
-          headerTitle: "Auth demo with React Navigation",
-          headerRight: () => (
-            <IconButton icon="logout" onPress={() => logout()} />
-          ),
-          headerTitleAlign: "left",
-          headerStyle: {
-            elevation: 0, // Remove shadow on Android
-            shadowOpacity: 0, // Remove shadow on iOS
+          headerShown: false,
+          tabBarStyle: {
+            borderTopWidth: 1,
+            borderTopColor: '#E0E0E0',
+            elevation: 0,
           },
         }}
-
       >
         <Tab.Screen
           name="Home"
           component={HomeScreen}
           options={{
+            tabBarLabel: "Inicio",
             tabBarIcon: ({ color }) => (
               <FontAwesome6 name="house" size={24} color={color} iconStyle="solid" />
+            )
+          }}
+        />
+        <Tab.Screen
+          name="Notifications"
+          component={SettingScreen}
+          options={{
+            tabBarLabel: "Notificaciones",
+            tabBarIcon: ({ color }) => (
+              <FontAwesome6 name="bell" size={24} color={color} />
             )
           }}
         />
@@ -66,6 +72,7 @@ export default function AuthFlow() {
           name="Profile"
           component={SettingScreen}
           options={{
+            tabBarLabel: "Perfil",
             tabBarIcon: ({ color }) => (
               <FontAwesome6 name="user" size={24} color={color} />
             )

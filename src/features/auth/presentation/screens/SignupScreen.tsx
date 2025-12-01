@@ -8,6 +8,7 @@ import { useAuth } from "../context/authContext";
 export default function SignupScreen({ navigation }: { navigation: any }) {
   const { signup } = useAuth();
   const theme = useTheme();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,7 +21,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
       setError(null);
 
       // Validaciones
-      if (!email || !password || !confirmPassword) {
+      if (!name || !email || !password || !confirmPassword) {
         setError("Todos los campos son obligatorios");
         return;
       }
@@ -68,6 +69,25 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
           <Text variant="bodyMedium" style={styles.subtitle}>
             Completa los datos para registrarte
           </Text>
+
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <Text variant="bodyMedium" style={styles.label}>
+              Nombre
+            </Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              placeholder="Tu nombre completo"
+              mode="flat"
+              style={styles.input}
+              underlineStyle={{ display: 'none' }}
+              contentStyle={styles.inputContent}
+              textColor="#000000"
+              placeholderTextColor="#999999"
+            />
+          </View>
 
           {/* Email Input */}
           <View style={styles.inputContainer}>
