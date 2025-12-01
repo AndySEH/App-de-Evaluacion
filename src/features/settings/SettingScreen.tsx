@@ -1,8 +1,8 @@
+import { useAuth } from "@/src/features/auth/presentation/context/authContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from 'react';
 import { Dimensions, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Card, Text, TextInput, Button } from 'react-native-paper';
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useAuth } from "@/src/features/auth/presentation/context/authContext";
+import { Card, Text, TextInput } from 'react-native-paper';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
