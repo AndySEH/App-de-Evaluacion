@@ -7,6 +7,7 @@ import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
+import NotificationsScreen from "./features/notifications/NotificationsScreen";
 import AddProductScreen from "./features/products/presentation/screens/AddProductScreen";
 import UpdateProductScreen from "./features/products/presentation/screens/UpdateProductScreen";
 import SettingScreen from "./features/settings/SettingScreen";
@@ -59,7 +60,7 @@ export default function AuthFlow() {
         />
         <Tab.Screen
           name="Notifications"
-          component={SettingScreen}
+          component={NotificationsScreen}
           options={{
             tabBarLabel: "Notificaciones",
             tabBarIcon: ({ color }) => (
