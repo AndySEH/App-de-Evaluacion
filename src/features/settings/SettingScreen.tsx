@@ -8,14 +8,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
 
 export default function SettingScreen() {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editName, setEditName] = useState('');
-    const [editPassword, setEditPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const getUserId = () => {
-        return user?.uid || user?.id || user?._id || '1';
+        return user?.uid || user?.id || user?._id || '';
     };
 
     const getUserName = () => {
@@ -26,23 +25,32 @@ export default function SettingScreen() {
 
     const handleOpenEditModal = () => {
         setEditName(getUserName());
-        setEditPassword('');
-        setConfirmPassword('');
         setIsEditModalVisible(true);
     };
 
     const handleCloseEditModal = () => {
         setIsEditModalVisible(false);
         setEditName('');
-        setEditPassword('');
-        setConfirmPassword('');
     };
 
-    const handleSaveProfile = () => {
-        // Aquí se implementará la lógica para guardar los cambios
-        // Por ahora solo cerramos el modal
-        console.log('Guardando perfil:', { name: editName, password: editPassword });
-        handleCloseEditModal();
+    const handleSaveProfile = async () => {
+        const userId = getUserId();
+        if (!userId) {
+            console.error('No user ID found');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await updateUser(userId, { name: editName });
+            console.log('Perfil actualizado exitosamente');
+            handleCloseEditModal();
+        } catch (error) {
+            console.error('Error al actualizar perfil:', error);
+            // Aquí podrías mostrar un mensaje de error al usuario
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -151,40 +159,7 @@ export default function SettingScreen() {
                                     contentStyle={styles.inputContent}
                                     textColor="#000000"
                                     placeholderTextColor="#999999"
-                                />
-                            </View>
-
-                            {/* Campo de contraseña */}
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.inputLabel}>Nueva Contraseña</Text>
-                                <TextInput
-                                    value={editPassword}
-                                    onChangeText={setEditPassword}
-                                    placeholder="Dejar en blanco para no cambiar"
-                                    secureTextEntry={true}
-                                    mode="flat"
-                                    style={styles.input}
-                                    underlineStyle={{ display: 'none' }}
-                                    contentStyle={styles.inputContent}
-                                    textColor="#000000"
-                                    placeholderTextColor="#999999"
-                                />
-                            </View>
-
-                            {/* Campo de confirmar contraseña */}
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.inputLabel}>Confirmar Contraseña</Text>
-                                <TextInput
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                    placeholder="Confirmar nueva contraseña"
-                                    secureTextEntry={true}
-                                    mode="flat"
-                                    style={styles.input}
-                                    underlineStyle={{ display: 'none' }}
-                                    contentStyle={styles.inputContent}
-                                    textColor="#000000"
-                                    placeholderTextColor="#999999"
+                                    disabled={isLoading}
                                 />
                             </View>
                         </View>
@@ -193,14 +168,18 @@ export default function SettingScreen() {
                             <TouchableOpacity 
                                 style={styles.cancelButton} 
                                 onPress={handleCloseEditModal}
+                                disabled={isLoading}
                             >
                                 <Text style={styles.cancelButtonText}>Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
-                                style={styles.saveButton} 
+                                style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
                                 onPress={handleSaveProfile}
+                                disabled={isLoading}
                             >
-                                <Text style={styles.saveButtonText}>Guardar</Text>
+                                <Text style={styles.saveButtonText}>
+                                    {isLoading ? 'Guardando...' : 'Guardar'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -424,6 +403,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: '#8B5CF6',
         alignItems: 'center',
+    },
+    saveButtonDisabled: {
+        backgroundColor: '#C4B5FD',
     },
     saveButtonText: {
         fontSize: 16,

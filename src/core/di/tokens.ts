@@ -6,6 +6,11 @@ export const TOKENS = {
   SignupUC: Symbol("SignupUC"),
   LogoutUC: Symbol("LogoutUC"),
   GetCurrentUserUC: Symbol("GetCurrentUserUC"),
+  
+  // User
+  UserRemoteDS: Symbol("UserRemoteDS"),
+  UserRepo: Symbol("UserRepo"),
+  UpdateUserUC: Symbol("UpdateUserUC"),
 
   // Courses
   CourseRemoteDS: Symbol("CourseRemoteDS"),

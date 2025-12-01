@@ -10,6 +10,11 @@ import { LoginUseCase } from "@/src/features/auth/domain/usecases/LoginUseCase";
 import { LogoutUseCase } from "@/src/features/auth/domain/usecases/LogoutUseCase";
 import { SignupUseCase } from "@/src/features/auth/domain/usecases/SignupUseCase";
 
+// User
+import { UserRemoteDataSourceImpl } from "@/src/features/auth/data/datasources/UserRemoteDataSourceImp";
+import { UserRepositoryImpl } from "@/src/features/auth/data/repositories/UserRepositoryImpl";
+import { UpdateUserUseCase } from "@/src/features/auth/domain/usecases/UpdateUserUseCase";
+
 // Courses
 import { CourseRemoteDataSourceImp } from "@/src/features/courses/data/datasources/CourseRemoteDataSourceImp";
 import { CourseRepositoryImpl } from "@/src/features/courses/data/repositories/CourseRepositoryImpl";
@@ -81,6 +86,13 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
             .register(TOKENS.SignupUC, new SignupUseCase(authRepo))
             .register(TOKENS.LogoutUC, new LogoutUseCase(authRepo))
             .register(TOKENS.GetCurrentUserUC, new GetCurrentUserUseCase(authRepo));
+
+        // User
+        const userDS = new UserRemoteDataSourceImpl(authDS);
+        const userRepo = new UserRepositoryImpl(userDS);
+        c.register(TOKENS.UserRemoteDS, userDS)
+            .register(TOKENS.UserRepo, userRepo)
+            .register(TOKENS.UpdateUserUC, new UpdateUserUseCase(userRepo));
 
         // Courses
         const courseRemoteDS = new CourseRemoteDataSourceImp(authDS);
