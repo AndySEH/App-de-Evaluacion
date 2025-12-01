@@ -79,7 +79,7 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
 
   async getAssessmentById(id: string): Promise<Assessment | undefined> {
     console.log('[API] GET Assessment by ID - Params:', { id, table: this.table });
-    const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
+    const url = `${this.baseUrl}/read?tableName=${this.table}&id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {

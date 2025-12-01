@@ -78,8 +78,8 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
   }
 
   async getPeerEvaluationById(id: string): Promise<PeerEvaluation | undefined> {
-    console.log('[API] GET Peer Evaluation by ID - Params:', { id, table: this.table });
-    const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
+    console.log('[API] GET PeerEvaluation by ID - Params:', { id, table: this.table });
+    const url = `${this.baseUrl}/read?tableName=${this.table}&id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {

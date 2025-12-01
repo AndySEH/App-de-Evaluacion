@@ -79,7 +79,7 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
 
   async getGroupById(id: string): Promise<Group | undefined> {
     console.log('[API] GET Group by ID - Params:', { id, table: this.table });
-    const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
+    const url = `${this.baseUrl}/read?tableName=${this.table}&id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {

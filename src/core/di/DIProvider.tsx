@@ -47,6 +47,7 @@ import { ActivityRepositoryImpl } from "@/src/features/activities/data/repositor
 import { AddActivityUseCase } from "@/src/features/activities/domain/usecases/AddActivityUseCase";
 import { DeleteActivityUseCase } from "@/src/features/activities/domain/usecases/DeleteActivityUseCase";
 import { GetActivitiesByCourseUseCase } from "@/src/features/activities/domain/usecases/GetActivitiesByCourseUseCase";
+import { GetActivitiesCountByCourseUseCase } from "@/src/features/activities/domain/usecases/GetActivitiesCountByCourseUseCase";
 import { GetActivityByIdUseCase } from "@/src/features/activities/domain/usecases/GetActivityByIdUseCase";
 import { UpdateActivityUseCase } from "@/src/features/activities/domain/usecases/UpdateActivityUseCase";
 
@@ -132,6 +133,7 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
         c.register(TOKENS.ActivityRemoteDS, activityRemoteDS)
             .register(TOKENS.ActivityRepo, activityRepo)
             .register(TOKENS.GetActivitiesByCourseUC, new GetActivitiesByCourseUseCase(activityRepo))
+            .register(TOKENS.GetActivitiesCountByCourseUC, new GetActivitiesCountByCourseUseCase(activityRepo))
             .register(TOKENS.GetActivityByIdUC, new GetActivityByIdUseCase(activityRepo))
             .register(TOKENS.AddActivityUC, new AddActivityUseCase(activityRepo))
             .register(TOKENS.UpdateActivityUC, new UpdateActivityUseCase(activityRepo))

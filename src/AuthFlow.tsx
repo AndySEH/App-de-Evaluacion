@@ -5,6 +5,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
+import AddCourseScreen from "./features/courses/presentation/screens/AddCourseScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
 import NotificationsScreen from "./features/notifications/NotificationsScreen";
@@ -91,6 +92,14 @@ export default function AuthFlow() {
             options={{
               title: "Mis Cursos",
               headerShown: true,
+            }}
+          />
+          <Stack.Screen
+            name="AddCourse"
+            component={AddCourseScreen}
+            options={{
+              title: "Crear Curso",
+              headerShown: false,
             }}
           />
         </>

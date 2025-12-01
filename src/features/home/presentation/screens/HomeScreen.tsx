@@ -1,5 +1,8 @@
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
+import { useDI } from "@/src/core/di/DIProvider";
+import { TOKENS } from "@/src/core/di/tokens";
+import { GetActivitiesCountByCourseUseCase } from "@/src/features/activities/domain/usecases/GetActivitiesCountByCourseUseCase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -12,7 +15,11 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
   const { user, logout } = useAuth();
   const { courses, getAllCourses, isLoading } = useCourses();
+  const di = useDI();
+  const getActivitiesCountUC = di.resolve<GetActivitiesCountByCourseUseCase>(TOKENS.GetActivitiesCountByCourseUC);
+  
   const [userName, setUserName] = useState("Usuario");
+  const [activitiesCounts, setActivitiesCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     console.log('[HomeScreen] useEffect triggered - user:', user);
@@ -34,6 +41,34 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       console.log('[HomeScreen] No user ID found, user object:', user);
     }
   }, [user]);
+
+  // Cargar conteos de actividades cuando cambien los cursos
+  useEffect(() => {
+    const loadActivitiesCounts = async () => {
+      if (courses.length === 0) return;
+      
+      console.log('[HomeScreen] Loading activities counts for courses:', courses.length);
+      const counts: Record<string, number> = {};
+      
+      for (const course of courses) {
+        const courseId = course.id || course._id;
+        if (courseId) {
+          try {
+            const count = await getActivitiesCountUC.execute(courseId);
+            counts[courseId] = count;
+            console.log(`[HomeScreen] Course ${courseId} has ${count} activities`);
+          } catch (error) {
+            console.error(`[HomeScreen] Error loading activities count for course ${courseId}:`, error);
+            counts[courseId] = 0;
+          }
+        }
+      }
+      
+      setActivitiesCounts(counts);
+    };
+    
+    loadActivitiesCounts();
+  }, [courses]);
 
   const isTeacher = (course: any) => {
     const userId = user?.uid || user?.id || user?._id;
@@ -80,12 +115,28 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     return getRandomStudentsCount();
   };
 
+  const getActivitiesCount = (course: any) => {
+    const courseId = course.id || course._id;
+    
+    // Si ya tenemos el conteo cargado, usarlo
+    if (courseId && activitiesCounts[courseId] !== undefined) {
+      return activitiesCounts[courseId];
+    }
+    
+    // Si el curso tiene activitiesCount en la BD, usarlo
+    if (course.activitiesCount !== undefined && course.activitiesCount !== null) {
+      return course.activitiesCount;
+    }
+    
+    // De lo contrario, mostrar 0 (se cargará después)
+    return 0;
+  };
+
   const getCourseIcon = (index: number) => {
     const colors = ['#9C27B0', '#E91E63', '#00BCD4', '#4CAF50', '#FF9800'];
     return colors[index % colors.length];
   };
 
-  const getRandomActivitiesCount = () => Math.floor(Math.random() * 20) + 1;
   const getRandomStudentsCount = () => Math.floor(Math.random() * 50) + 10;
 
   return (
@@ -173,7 +224,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
                           <View style={styles.statItem}>
                             <MaterialCommunityIcons name="file-document-outline" size={16} color="#6B6B6B" />
                             <Text style={styles.statText}>
-                              {getRandomActivitiesCount()} actividades
+                              {getActivitiesCount(course)} actividades
                             </Text>
                           </View>
                         </View>

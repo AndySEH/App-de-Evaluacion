@@ -8,6 +8,7 @@ export interface Course {
   studentIds?: string[]; // JSON array
   invitations?: any[]; // JSON array
   studentsCount?: number;
+  activitiesCount?: number; // Campo para almacenar el conteo de actividades
 }
 
 export type NewCourse = Omit<Course, "_id">;

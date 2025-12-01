@@ -42,6 +42,7 @@ export const TOKENS = {
   ActivityRemoteDS: Symbol("ActivityRemoteDS"),
   ActivityRepo: Symbol("ActivityRepo"),
   GetActivitiesByCourseUC: Symbol("GetActivitiesByCourseUC"),
+  GetActivitiesCountByCourseUC: Symbol("GetActivitiesCountByCourseUC"),
   GetActivityByIdUC: Symbol("GetActivityByIdUC"),
   AddActivityUC: Symbol("AddActivityUC"),
   UpdateActivityUC: Symbol("UpdateActivityUC"),

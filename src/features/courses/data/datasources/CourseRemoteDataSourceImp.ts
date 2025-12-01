@@ -51,17 +51,25 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
 
     if (response.status === 401 && retry) {
       try {
+        console.log("[CourseRemote] Token expired, attempting refresh...");
         const refreshToken = await this.prefs.retrieveData<string>("refreshToken");
         if (!refreshToken) {
+          console.error("[CourseRemote] No refresh token available");
           await this.prefs.removeData("token");
           await this.prefs.removeData("refreshToken");
           throw new Error("No refresh token available");
         }
 
         const refreshed = await this.authService.refreshToken();
+        console.log("[CourseRemote] Token refresh result:", refreshed);
+        
         if (refreshed) {
           const newToken = await this.prefs.retrieveData<string>("token");
-          if (!newToken) throw new Error("Token refresh failed");
+          if (!newToken) {
+            console.error("[CourseRemote] Token refresh succeeded but no new token found");
+            throw new Error("Token refresh failed");
+          }
+          console.log("[CourseRemote] Retrying request with new token...");
           const retryHeaders = { ...(options.headers || {}), Authorization: `Bearer ${newToken}` };
           const retryResp = await fetch(url, { ...options, headers: retryHeaders });
           try {
@@ -163,7 +171,7 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
 
   async getCourseById(id: string): Promise<Course | undefined> {
     console.log('[API] GET Course by ID - Params:', { id, table: this.table });
-    const url = `${this.baseUrl}/read?tableName=${this.table}&_id=${encodeURIComponent(id)}`;
+    const url = `${this.baseUrl}/read?tableName=${this.table}&id=${encodeURIComponent(id)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
     if (response.status === 200) {
@@ -183,9 +191,23 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
 
   async addCourse(course: Course): Promise<void> {
     console.log('[API] POST Add Course - Params:', { course, table: this.table });
+    
+    // Verificar que tenemos un token antes de intentar
+    const token = await this.prefs.retrieveData<string>("token");
+    console.log('[API] POST Add Course - Token exists:', !!token);
+    
     const url = `${this.baseUrl}/insert`;
 
-    const body = JSON.stringify({ tableName: this.table, records: [course] });
+    // Generar un ID único si no existe
+    const courseWithId = {
+      ...course,
+      id: course.id || `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      studentIds: course.studentIds || [],
+      invitations: course.invitations || [],
+    };
+
+    const body = JSON.stringify({ tableName: this.table, records: [courseWithId] });
+    console.log('[API] POST Add Course - Course with ID:', courseWithId);
 
     const response = await this.authorizedFetch(url, {
       method: "POST",
@@ -197,12 +219,14 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
       console.log('[API] POST Add Course - Result: Success');
       return Promise.resolve();
     }
-    if (response.status === 401) {
-      console.error('[API] POST Add Course - Error:', response.status, 'Unauthorized');
-      throw new Error("Unauthorized (token issue)");
-    }
+    
     const errorBody = await response.json().catch(() => ({}));
     console.error('[API] POST Add Course - Error:', response.status, errorBody);
+    
+    if (response.status === 401) {
+      throw new Error("Unauthorized - Please login again");
+    }
+    
     throw new Error(`Error adding course: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 }

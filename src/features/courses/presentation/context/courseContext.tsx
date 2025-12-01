@@ -18,7 +18,7 @@ type CourseContextType = {
   courses: Course[];
   isLoading: boolean;
   error: string | null;
-  addCourse: (course: NewCourse) => Promise<void>;
+  addCourse: (course: NewCourse, userId: string) => Promise<void>;
   getCourse: (id: string) => Promise<Course | undefined>;
   getCoursesByTeacher: (teacherId: string) => Promise<void>;
   getCoursesByStudent: (studentId: string) => Promise<void>;
@@ -85,7 +85,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
       // Combinar y eliminar duplicados (por si acaso)
       const allCourses = [...teacherCourses];
       studentCourses.forEach(course => {
-        const exists = allCourses.some(c => (c._id || c.id) === (course._id || course.id));
+        const exists = allCourses.some(c => (c.id || c._id) === (course.id || course._id));
         if (!exists) {
           allCourses.push(course);
         }
@@ -105,13 +105,19 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     await getAllCourses(userId);
   };
 
-  const addCourse = async (course: NewCourse) => {
+  const addCourse = async (course: NewCourse, userId: string) => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log('[CourseContext] Creating course:', course);
       await addCourseUC.execute(course);
+      console.log('[CourseContext] Course created successfully, refreshing list...');
+      // Recargar la lista de cursos después de crear uno nuevo
+      await getAllCourses(userId);
     } catch (e) {
+      console.error('[CourseContext] Error creating course:', e);
       setError((e as Error).message);
+      throw e; // Re-lanzar el error para que AddCourseScreen pueda manejarlo
     } finally {
       setIsLoading(false);
     }
