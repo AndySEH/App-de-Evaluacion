@@ -1,7 +1,7 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Text } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
