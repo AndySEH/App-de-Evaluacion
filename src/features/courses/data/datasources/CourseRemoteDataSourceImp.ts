@@ -198,16 +198,17 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
     
     const url = `${this.baseUrl}/insert`;
 
-    // Generar un ID único si no existe
+    // Generar un ID único si no existe y asegurar que studentIds e invitations sean arrays
     const courseWithId = {
       ...course,
       id: course.id || `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      studentIds: course.studentIds || [],
-      invitations: course.invitations || [],
+      studentIds: Array.isArray(course.studentIds) ? course.studentIds : [],
+      invitations: Array.isArray(course.invitations) ? course.invitations : [],
     };
 
     const body = JSON.stringify({ tableName: this.table, records: [courseWithId] });
     console.log('[API] POST Add Course - Course with ID:', courseWithId);
+    console.log('[API] POST Add Course - Body:', body);
 
     const response = await this.authorizedFetch(url, {
       method: "POST",

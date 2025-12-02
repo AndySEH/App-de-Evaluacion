@@ -21,6 +21,11 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
     return user?.uid || user?.id || user?._id || '';
   };
 
+  const generateRegistrationCode = () => {
+    // Genera un número aleatorio entre 100000 y 999999
+    return Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+  };
+
   const handleCreateCourse = async () => {
     // Validaciones
     if (!courseName.trim()) {
@@ -38,10 +43,14 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
     setError('');
 
     try {
+      const registrationCode = generateRegistrationCode();
+      console.log('Código de registro generado:', registrationCode);
+      
       await addCourse({
         name: courseName.trim(),
         description: courseDescription.trim() || undefined,
         teacherId: userId,
+        registrationCode: registrationCode.toString(),
         studentIds: [],
         invitations: [],
       }, userId);
