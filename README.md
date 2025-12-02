@@ -18,7 +18,7 @@ This is a starter project for building React Native apps with [Expo](https://exp
 2. Create a `.env` file in the root directory and add your Roble project ID
 
    ```
-   ROBLE_PROJECT_ID=your_project_id_here
+   EXPO_PUBLIC_ROBLE_PROJECT_ID=your_project_id_here
    ```
 
 3. Start the app
@@ -36,7 +36,42 @@ This is a starter project for building React Native apps with [Expo](https://exp
 - User authentication (login, logout, register) with Roble
 - Product management (create, update, delete) with Roble
 
-## For developing, start as a Docker container with the next commands
-docker build -t rn-expo-app .
+## Desarrollo con Docker 🐳
 
-docker run --rm -it --name rn-expo-app `  -p 19000:19000 -p 19001:19001 -p 19002:19002 -p 8081:8081 -p 19006:19006 `  -e ROBLE_PROJECT_ID=tu_project_id `  -e REACT_NATIVE_PACKAGER_HOSTNAME=host.docker.internal `  -v "${PWD}:/app" -v /app/node_modules `  rn-expo-app
+Este proyecto está configurado con **Docker** y **hot reload automático** para facilitar el desarrollo.
+
+### Inicio rápido con Docker
+
+```bash
+# Construir e iniciar el contenedor
+docker-compose up
+
+# O usar el script de desarrollo (Windows PowerShell)
+.\docker-dev.ps1 start
+
+# O usar el script de desarrollo (Bash)
+./docker-dev.sh start
+```
+
+### Características de Docker
+
+✅ **Hot reload automático** - Los cambios en el código se reflejan inmediatamente  
+✅ **Volúmenes configurados** - Tu código se monta en el contenedor  
+✅ **Dependencias aisladas** - node_modules del contenedor no interfieren con tu sistema  
+✅ **Scripts de desarrollo** - Comandos simplificados para operaciones comunes
+
+📖 **Documentación completa**: Ver [DOCKER.md](./DOCKER.md) para más detalles
+
+### Comandos útiles
+
+```bash
+# Ver logs
+docker-compose logs -f
+
+# Detener contenedor
+docker-compose down
+
+# Reconstruir después de cambios en package.json
+docker-compose build --no-cache
+docker-compose up
+```

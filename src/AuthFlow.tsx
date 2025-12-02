@@ -1,20 +1,19 @@
-import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
-import { IconButton } from "react-native-paper";
 
+import ActivityDetailScreen from "./features/activities/presentation/screens/ActivityDetailScreen";
 import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
+import AddCourseScreen from "./features/courses/presentation/screens/AddCourseScreen";
+import CategoryDetailScreen from "./features/courses/presentation/screens/CategoryDetailScreen";
+import CourseDetailScreen from "./features/courses/presentation/screens/CourseDetailScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
-import AddProductScreen from "./features/products/presentation/screens/AddProductScreen";
-import UpdateProductScreen from "./features/products/presentation/screens/UpdateProductScreen";
+import NotificationsScreen from "./features/notifications/NotificationsScreen";
 import SettingScreen from "./features/settings/SettingScreen";
 
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
 
 export default function AuthFlow() {
   const { isLoggedIn, logout } = useAuth();
@@ -36,76 +35,53 @@ export default function AuthFlow() {
     );
   }
 
-  function ContentTabs() {
-    return (
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: true,
-          headerTitle: "Auth demo with React Navigation",
-          headerRight: () => (
-            <IconButton icon="logout" onPress={() => logout()} />
-          ),
-          headerTitleAlign: "left",
-          headerStyle: {
-            elevation: 0, // Remove shadow on Android
-            shadowOpacity: 0, // Remove shadow on iOS
-          },
-        }}
-
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarIcon: ({ color }) => (
-              <FontAwesome6 name="house" size={24} color={color} iconStyle="solid" />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={SettingScreen}
-          options={{
-            tabBarIcon: ({ color }) => (
-              <FontAwesome6 name="user" size={24} color={color} />
-            )
-          }}
-        />
-      </Tab.Navigator>
-    );
-  }
-
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
         <>
-          <Stack.Screen name="App" component={ContentTabs} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Settings" component={SettingScreen} />
           <Stack.Screen
-            name="AddProductScreen"
-            component={AddProductScreen}
+            name="TeacherCourses"
+            component={TeacherCoursesScreen}
             options={{
-              title: "Add Product",
+              title: "Mis Cursos",
               headerShown: true,
-              presentation: 'modal' // Optional: makes it slide up from bottom
             }}
           />
           <Stack.Screen
-            name="UpdateProductScreen"
-            component={UpdateProductScreen}
+            name="AddCourse"
+            component={AddCourseScreen}
             options={{
-              title: "Update Product",
-              headerShown: true,
-              presentation: 'modal' // Optional: makes it slide up from bottom
+              title: "Crear Curso",
+              headerShown: false,
             }}
           />
-            <Stack.Screen
-              name="TeacherCourses"
-              component={TeacherCoursesScreen}
-              options={{
-                title: "Mis Cursos",
-                headerShown: true,
-              }}
-            />
+          <Stack.Screen
+            name="CourseDetail"
+            component={CourseDetailScreen}
+            options={{
+              title: "Detalles del Curso",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="CategoryDetail"
+            component={CategoryDetailScreen}
+            options={{
+              title: "Grupos - Categoría",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="ActivityDetail"
+            component={ActivityDetailScreen}
+            options={{
+              title: "Detalles de la Actividad",
+              headerShown: false,
+            }}
+          />
         </>
       ) : (
         <>

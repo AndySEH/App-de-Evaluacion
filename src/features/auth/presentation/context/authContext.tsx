@@ -7,6 +7,7 @@ import { GetCurrentUserUseCase } from "../../domain/usecases/GetCurrentUserUseCa
 import { LoginUseCase } from "../../domain/usecases/LoginUseCase";
 import { LogoutUseCase } from "../../domain/usecases/LogoutUseCase";
 import { SignupUseCase } from "../../domain/usecases/SignupUseCase";
+import { UpdateUserUseCase } from "../../domain/usecases/UpdateUserUseCase";
 
 
 // const authRemoteDataSource = new AuthRemoteDataSourceImpl();
@@ -23,6 +24,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (userId: string, userData: Partial<AuthUser>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,13 +36,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signupUseCase = di.resolve<SignupUseCase>(TOKENS.SignupUC);
   const logoutUseCase = di.resolve<LogoutUseCase>(TOKENS.LogoutUC);
   const getCurrentUserUseCase = di.resolve<GetCurrentUserUseCase>(TOKENS.GetCurrentUserUC);
+  const updateUserUseCase = di.resolve<UpdateUserUseCase>(TOKENS.UpdateUserUC);
 
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    console.log('[AuthContext] Initializing - loading user from storage');
     getCurrentUserUseCase.execute().then((user: React.SetStateAction<AuthUser | null>) => {
+      console.log('[AuthContext] User loaded from storage:', user);
       setUser(user);
       setIsLoggedIn(!!user);
     });
@@ -66,8 +71,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
   };
 
+  const updateUser = async (userId: string, userData: Partial<AuthUser>) => {
+    const updatedUser = await updateUserUseCase.execute(userId, userData);
+    setUser(updatedUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoggedIn }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, isLoggedIn, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

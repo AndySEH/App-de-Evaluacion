@@ -8,4 +8,5 @@ export interface AuthRemoteDataSource {
   forgotPassword(email: string): Promise<boolean>;
   resetPassword(email: string, newPassword: string, validationCode: string): Promise<boolean>;
   verifyToken(): Promise<boolean>;
+  getStoredAuthInfo(): Promise<{ user: any | null; token: string | null; refreshToken: string | null }>;
 }

@@ -18,6 +18,7 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   async login(email: string, password: string): Promise<void> {
+    console.log('[API] POST Login - Params:', { email });
     try {
       const response = await fetch(`${this.baseUrl}/login`, {
         method: "POST",
@@ -31,22 +32,23 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         const refreshToken = data["refreshToken"];
         await this.prefs.storeData("token", token);
         await this.prefs.storeData("refreshToken", refreshToken);
-        // store user info if returned by the API, otherwise persist email as minimal info
         const serverUser = data["user"] ?? { email };
         await this.prefs.storeData("user", serverUser);
-        console.log("Token:", token, "\nRefresh Token:", refreshToken);
+        console.log('[API] POST Login - Result: Success', { user: serverUser });
         return Promise.resolve();
       } else {
         const body = await response.json();
+        console.error('[API] POST Login - Error:', response.status, body);
         throw new Error(`Login error: ${body.message}`);
       }
     } catch (e: any) {
-      console.error("Login failed", e);
+      console.error('[API] POST Login - Exception:', e);
       throw e;
     }
   }
 
   async signUp(email: string, password: string): Promise<void> {
+    console.log('[API] POST Signup - Params:', { email });
     try {
       const response = await fetch(`${this.baseUrl}/signup`, {
         method: "POST",
@@ -59,18 +61,21 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
 
       if (response.status === 201) {
+        console.log('[API] POST Signup - Result: Success');
         return Promise.resolve();
       } else {
         const body = await response.json();
+        console.error('[API] POST Signup - Error:', response.status, body);
         throw new Error(`Signup error: ${(body.message || []).join(" ")}`);
       }
     } catch (e: any) {
-      console.error("Signup failed", e);
+      console.error('[API] POST Signup - Exception:', e);
       throw e;
     }
   }
 
   async logOut(): Promise<void> {
+    console.log('[API] POST Logout - Params: {}');
     try {
       const token = await this.prefs.retrieveData<string>("token");
       if (!token) throw new Error("No token found");
@@ -83,14 +88,15 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (response.status === 201) {
         await this.prefs.removeData("token");
         await this.prefs.removeData("refreshToken");
-        console.log("Logged out successfully");
+        console.log('[API] POST Logout - Result: Success');
         return Promise.resolve();
       } else {
         const body = await response.json();
+        console.error('[API] POST Logout - Error:', response.status, body);
         throw new Error(`Logout error: ${body.message}`);
       }
     } catch (e: any) {
-      console.error("Logout failed", e);
+      console.error('[API] POST Logout - Exception:', e);
       throw e;
     }
   }
@@ -115,6 +121,7 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   async refreshToken(): Promise<boolean> {
+    console.log('[API] POST Refresh Token - Params: {}');
     try {
       const refreshToken = await this.prefs.retrieveData<string>(
         "refreshToken"
@@ -131,18 +138,18 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         const data = await response.json();
         const newToken = data["accessToken"];
         await this.prefs.storeData("token", newToken);
-        // if API returns updated user info, persist it as well
         if (data["user"]) {
           await this.prefs.storeData("user", data["user"]);
         }
-        console.log("Token refreshed successfully");
+        console.log('[API] POST Refresh Token - Result: Success');
         return true;
       } else {
         const body = await response.json();
+        console.error('[API] POST Refresh Token - Error:', response.status, body);
         throw new Error(`Refresh token error: ${body.message}`);
       }
     } catch (e: any) {
-      console.error("Refresh token failed", e);
+      console.error('[API] POST Refresh Token - Exception:', e);
       throw e;
     }
   }
@@ -157,9 +164,13 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     throw new Error("Method not implemented.");
   }
   async verifyToken(): Promise<boolean> {
+    console.log('[API] GET Verify Token - Params: {}');
     try {
       const token = await this.prefs.retrieveData<string>("token");
-      if (!token) return false;
+      if (!token) {
+        console.log('[API] GET Verify Token - Result: No token found');
+        return false;
+      }
 
       const response = await fetch(`${this.baseUrl}/verify-token`, {
         method: "GET",
@@ -167,15 +178,15 @@ export class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
 
       if (response.status === 200) {
-        console.log("Token is valid");
+        console.log('[API] GET Verify Token - Result: Valid');
         return true;
       } else {
         const body = await response.json();
-        console.error(`Token verification error: ${body.message}`);
+        console.error('[API] GET Verify Token - Error:', response.status, body);
         return false;
       }
     } catch (e: any) {
-      console.error("Verify token failed", e);
+      console.error('[API] GET Verify Token - Exception:', e);
       return false;
     }
   }
