@@ -126,16 +126,22 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
-      idColumn: "_id",
+      idColumn: "id",
       idValue: id,
       updates,
     });
+    console.log('[API] PUT Update Group - Request URL:', url);
+    console.log('[API] PUT Update Group - Request Body:', body);
 
     const response = await this.authorizedFetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body,
     });
+
+    console.log('[API] PUT Update Group - Response Status:', response.status);
+    const responseData = await response.json().catch(() => ({}));
+    console.log('[API] PUT Update Group - Response Data:', responseData);
 
     if (response.status === 200) {
       console.log('[API] PUT Update Group - Result: Success');
@@ -145,23 +151,30 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       console.error('[API] PUT Update Group - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
-    console.error('[API] PUT Update Group - Error:', response.status, errorBody);
-    throw new Error(`Error updating group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
+    console.error('[API] PUT Update Group - Error:', response.status, responseData);
+    throw new Error(`Error updating group: ${response.status} - ${responseData.message ?? "Unknown error"}`);
   }
 
   async deleteGroup(id: string): Promise<void> {
     console.log('[API] DELETE Group - Params:', { id, table: this.table });
     const url = `${this.baseUrl}/delete`;
+    const body = JSON.stringify({
+      tableName: this.table,
+      idColumn: "id",
+      idValue: id,
+    });
+    console.log('[API] DELETE Group - Request URL:', url);
+    console.log('[API] DELETE Group - Request Body:', body);
+    
     const response = await this.authorizedFetch(url, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tableName: this.table,
-        idColumn: "_id",
-        idValue: id,
-      }),
+      body,
     });
+
+    console.log('[API] DELETE Group - Response Status:', response.status);
+    const responseData = await response.json().catch(() => ({}));
+    console.log('[API] DELETE Group - Response Data:', responseData);
 
     if (response.status === 200) {
       console.log('[API] DELETE Group - Result: Success');
@@ -171,8 +184,7 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       console.error('[API] DELETE Group - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
-    console.error('[API] DELETE Group - Error:', response.status, errorBody);
-    throw new Error(`Error deleting group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
+    console.error('[API] DELETE Group - Error:', response.status, responseData);
+    throw new Error(`Error deleting group: ${response.status} - ${responseData.message ?? "Unknown error"}`);
   }
 }

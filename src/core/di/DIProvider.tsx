@@ -41,6 +41,8 @@ import { AddGroupUseCase } from "@/src/features/courses/domain/usecases/AddGroup
 import { DeleteGroupUseCase } from "@/src/features/courses/domain/usecases/DeleteGroupUseCase";
 import { GetGroupByIdUseCase } from "@/src/features/courses/domain/usecases/GetGroupByIdUseCase";
 import { GetGroupsByCategoryUseCase } from "@/src/features/courses/domain/usecases/GetGroupsByCategoryUseCase";
+import { GetGroupsCountByCategoryUseCase } from "@/src/features/courses/domain/usecases/GetGroupsCountByCategoryUseCase";
+import { GetStudentsWithoutGroupUseCase } from "@/src/features/courses/domain/usecases/GetStudentsWithoutGroupUseCase";
 import { UpdateGroupUseCase } from "@/src/features/courses/domain/usecases/UpdateGroupUseCase";
 
 // Activities
@@ -126,10 +128,12 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
         c.register(TOKENS.GroupRemoteDS, groupRemoteDS)
             .register(TOKENS.GroupRepo, groupRepo)
             .register(TOKENS.GetGroupsByCategoryUC, new GetGroupsByCategoryUseCase(groupRepo))
+            .register(TOKENS.GetGroupsCountByCategoryUC, new GetGroupsCountByCategoryUseCase(groupRepo))
             .register(TOKENS.GetGroupByIdUC, new GetGroupByIdUseCase(groupRepo))
             .register(TOKENS.AddGroupUC, new AddGroupUseCase(groupRepo))
             .register(TOKENS.UpdateGroupUC, new UpdateGroupUseCase(groupRepo))
-            .register(TOKENS.DeleteGroupUC, new DeleteGroupUseCase(groupRepo));
+            .register(TOKENS.DeleteGroupUC, new DeleteGroupUseCase(groupRepo))
+            .register(TOKENS.GetStudentsWithoutGroupUC, new GetStudentsWithoutGroupUseCase(courseRepo, groupRepo, userRepo));
 
         // Activities
         const activityRemoteDS = new ActivityRemoteDataSourceImp(authDS);

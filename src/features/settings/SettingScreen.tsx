@@ -1,5 +1,6 @@
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useState } from 'react';
 import { Dimensions, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Card, Text, TextInput } from 'react-native-paper';
@@ -8,6 +9,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
 
 export default function SettingScreen() {
+    const navigation = useNavigation<any>();
     const { user, logout, updateUser } = useAuth();
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editName, setEditName] = useState('');
@@ -127,6 +129,22 @@ export default function SettingScreen() {
                         <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
                     </TouchableOpacity>
                 </View>
+            </View>
+
+            {/* Bottom Navigation */}
+            <View style={styles.bottomNav}>
+                <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Home')}>
+                    <MaterialCommunityIcons name="home-outline" size={24} color="#636E72" />
+                    <Text style={styles.navButtonText}>Inicio</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notifications')}>
+                    <MaterialCommunityIcons name="bell-outline" size={24} color="#636E72" />
+                    <Text style={styles.navButtonText}>Notificaciones</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navButton}>
+                    <MaterialCommunityIcons name="account" size={24} color="#8B5CF6" />
+                    <Text style={styles.navButtonTextActive}>Perfil</Text>
+                </TouchableOpacity>
             </View>
 
             {/* Modal de edición de perfil */}
@@ -329,6 +347,30 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#FFFFFF',
+    },
+    bottomNav: {
+        width: '100%',
+        flexDirection: 'row',
+        backgroundColor: '#FFFFFF',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#E8EAED',
+        justifyContent: 'space-around',
+    },
+    navButton: {
+        alignItems: 'center',
+        gap: 4,
+    },
+    navButtonText: {
+        fontSize: 12,
+        color: '#636E72',
+    },
+    navButtonTextActive: {
+        fontSize: 12,
+        color: '#8B5CF6',
+        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,

@@ -35,10 +35,12 @@ export const TOKENS = {
   GroupRemoteDS: Symbol("GroupRemoteDS"),
   GroupRepo: Symbol("GroupRepo"),
   GetGroupsByCategoryUC: Symbol("GetGroupsByCategoryUC"),
+  GetGroupsCountByCategoryUC: Symbol("GetGroupsCountByCategoryUC"),
   GetGroupByIdUC: Symbol("GetGroupByIdUC"),
   AddGroupUC: Symbol("AddGroupUC"),
   UpdateGroupUC: Symbol("UpdateGroupUC"),
   DeleteGroupUC: Symbol("DeleteGroupUC"),
+  GetStudentsWithoutGroupUC: Symbol("GetStudentsWithoutGroupUC"),
 
   // Activities
   ActivityRemoteDS: Symbol("ActivityRemoteDS"),

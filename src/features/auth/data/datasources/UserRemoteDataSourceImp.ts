@@ -92,12 +92,15 @@ export class UserRemoteDataSourceImpl implements UserDataSource {
     if (!projectId) throw new Error("Missing EXPO_PUBLIC_ROBLE_PROJECT_ID env var");
     
     const url = `${this.baseUrl}/${projectId}/read?tableName=${this.table}&userId=${userId}`;
+    console.log('[API] GET User by ID - Request URL:', url);
     
     const response = await this.authorizedFetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
 
+    console.log('[API] GET User by ID - Response Status:', response.status);
+    
     if (response.status === 200) {
       const data = await response.json();
       console.log('[API] GET User by ID - Result:', data);
@@ -107,15 +110,19 @@ export class UserRemoteDataSourceImpl implements UserDataSource {
       }
       return null;
     } else {
-      console.error('[API] GET User by ID - Error:', response.status);
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET User by ID - Error:', response.status, errorBody);
+      console.error('[API] GET User by ID - Failed URL:', url);
       return null;
     }
   }
 
   async getUsersByIds(userIds: string[]): Promise<AuthUser[]> {
-    console.log('[API] GET Users by IDs - Params:', { userIds, table: this.table });
+    console.log('[API] GET Users by IDs - Params:', { userIds, count: userIds.length, table: this.table });
+    console.log('[API] GET Users by IDs - Individual IDs:', userIds);
     
     if (userIds.length === 0) {
+      console.log('[API] GET Users by IDs - Empty array, returning []');
       return [];
     }
 
@@ -126,17 +133,21 @@ export class UserRemoteDataSourceImpl implements UserDataSource {
     const users: AuthUser[] = [];
     
     for (const userId of userIds) {
+      console.log('[API] GET Users by IDs - Fetching user:', userId);
       try {
         const user = await this.getUserById(userId);
         if (user) {
+          console.log('[API] GET Users by IDs - User found:', user.name || user.email);
           users.push(user);
+        } else {
+          console.warn('[API] GET Users by IDs - User not found for ID:', userId);
         }
       } catch (error) {
-        console.error(`[API] Error fetching user ${userId}:`, error);
+        console.error(`[API] GET Users by IDs - Error fetching user ${userId}:`, error);
       }
     }
 
-    console.log('[API] GET Users by IDs - Result:', users.length, 'users found');
+    console.log('[API] GET Users by IDs - Result:', users.length, 'users found out of', userIds.length, 'requested');
     return users;
   }
 }

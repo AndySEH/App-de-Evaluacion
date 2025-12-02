@@ -1,11 +1,10 @@
-import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 
 import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
 import AddCourseScreen from "./features/courses/presentation/screens/AddCourseScreen";
+import CategoryDetailScreen from "./features/courses/presentation/screens/CategoryDetailScreen";
 import CourseDetailScreen from "./features/courses/presentation/screens/CourseDetailScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
@@ -14,7 +13,6 @@ import SettingScreen from "./features/settings/SettingScreen";
 
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
 
 export default function AuthFlow() {
   const { isLoggedIn, logout } = useAuth();
@@ -36,57 +34,13 @@ export default function AuthFlow() {
     );
   }
 
-  function ContentTabs() {
-    return (
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            borderTopWidth: 1,
-            borderTopColor: '#E0E0E0',
-            elevation: 0,
-          },
-        }}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: "Inicio",
-            tabBarIcon: ({ color }) => (
-              <FontAwesome6 name="house" size={24} color={color} iconStyle="solid" />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="Notifications"
-          component={NotificationsScreen}
-          options={{
-            tabBarLabel: "Notificaciones",
-            tabBarIcon: ({ color }) => (
-              <FontAwesome6 name="bell" size={24} color={color} />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={SettingScreen}
-          options={{
-            tabBarLabel: "Perfil",
-            tabBarIcon: ({ color }) => (
-              <FontAwesome6 name="user" size={24} color={color} />
-            )
-          }}
-        />
-      </Tab.Navigator>
-    );
-  }
-
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
         <>
-          <Stack.Screen name="App" component={ContentTabs} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Settings" component={SettingScreen} />
           <Stack.Screen
             name="TeacherCourses"
             component={TeacherCoursesScreen}
@@ -108,6 +62,14 @@ export default function AuthFlow() {
             component={CourseDetailScreen}
             options={{
               title: "Detalles del Curso",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="CategoryDetail"
+            component={CategoryDetailScreen}
+            options={{
+              title: "Grupos - Categoría",
               headerShown: false,
             }}
           />

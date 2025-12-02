@@ -101,12 +101,18 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
     console.log('[API] POST Add Category - Params:', { category, table: this.table });
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [category] });
+    console.log('[API] POST Add Category - Request URL:', url);
+    console.log('[API] POST Add Category - Request Body:', body);
 
     const response = await this.authorizedFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
     });
+
+    console.log('[API] POST Add Category - Response Status:', response.status);
+    const responseData = await response.json().catch(() => ({}));
+    console.log('[API] POST Add Category - Response Data:', responseData);
 
     if (response.status === 201) {
       console.log('[API] POST Add Category - Result: Success');
@@ -116,9 +122,8 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       console.error('[API] POST Add Category - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
-    console.error('[API] POST Add Category - Error:', response.status, errorBody);
-    throw new Error(`Error adding category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
+    console.error('[API] POST Add Category - Error:', response.status, responseData);
+    throw new Error(`Error adding category: ${response.status} - ${responseData.message ?? "Unknown error"}`);
   }
 
   async updateCategory(id: string, updates: Partial<Category>): Promise<void> {

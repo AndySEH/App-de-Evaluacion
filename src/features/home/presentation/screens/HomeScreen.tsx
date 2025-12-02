@@ -253,6 +253,22 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         </View>
       </ScrollView>
 
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navButton}>
+          <MaterialCommunityIcons name="home" size={24} color="#5C6BC0" />
+          <Text style={styles.navButtonTextActive}>Inicio</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notifications')}>
+          <MaterialCommunityIcons name="bell-outline" size={24} color="#636E72" />
+          <Text style={styles.navButtonText}>Notificaciones</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Settings')}>
+          <MaterialCommunityIcons name="account-outline" size={24} color="#636E72" />
+          <Text style={styles.navButtonText}>Perfil</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Botón flotante para crear curso */}
       <View style={styles.fabWrapper}>
         <FAB
@@ -474,9 +490,33 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: 80,
   },
+  bottomNav: {
+    width: '100%',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E8EAED',
+    justifyContent: 'space-around',
+  },
+  navButton: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navButtonText: {
+    fontSize: 12,
+    color: '#636E72',
+  },
+  navButtonTextActive: {
+    fontSize: 12,
+    color: '#5C6BC0',
+    fontWeight: '600',
+  },
   fabWrapper: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 110,
     width: '100%',
     maxWidth: MAX_CONTENT_WIDTH,
     alignItems: 'flex-end',

@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Text } from "react-native-paper";
@@ -18,6 +19,7 @@ interface Notification {
 }
 
 export default function NotificationsScreen() {
+  const navigation = useNavigation<any>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const handleNotificationPress = (id: string) => {
@@ -99,6 +101,22 @@ export default function NotificationsScreen() {
           <View style={styles.bottomPadding} />
         </View>
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Home')}>  
+          <MaterialCommunityIcons name="home-outline" size={24} color="#636E72" />
+          <Text style={styles.navButtonText}>Inicio</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton}>
+          <MaterialCommunityIcons name="bell" size={24} color="#5C6BC0" />
+          <Text style={styles.navButtonTextActive}>Notificaciones</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Settings')}>
+          <MaterialCommunityIcons name="account-outline" size={24} color="#636E72" />
+          <Text style={styles.navButtonText}>Perfil</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -222,5 +240,29 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  bottomNav: {
+    width: '100%',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E8EAED',
+    justifyContent: 'space-around',
+  },
+  navButton: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navButtonText: {
+    fontSize: 12,
+    color: '#636E72',
+  },
+  navButtonTextActive: {
+    fontSize: 12,
+    color: '#5C6BC0',
+    fontWeight: '600',
   },
 });
