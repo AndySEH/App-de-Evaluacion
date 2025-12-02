@@ -1,8 +1,8 @@
 import { useDI } from "@/src/core/di/DIProvider";
 import { TOKENS } from "@/src/core/di/tokens";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
-import { Course } from "@/src/features/courses/domain/entities/Course";
 import { CourseDataSource } from "@/src/features/courses/data/datasources/CourseDataSource";
+import { Course } from "@/src/features/courses/domain/entities/Course";
 import { GetCoursesByTeacherUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByTeacherUseCase";
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
