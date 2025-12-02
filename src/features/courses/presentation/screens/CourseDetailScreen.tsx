@@ -17,6 +17,7 @@ import { UpdateGroupUseCase } from "@/src/features/courses/domain/usecases/Updat
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
+import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
@@ -43,6 +44,10 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const addGroupUC = di.resolve<AddGroupUseCase>(TOKENS.AddGroupUC);
   const updateGroupUC = di.resolve<UpdateGroupUseCase>(TOKENS.UpdateGroupUC);
   const deleteGroupUC = di.resolve<any>(TOKENS.DeleteGroupUC);
+  const getAssessmentsByActivityUC = di.resolve<any>(TOKENS.GetAssessmentsByActivityUC);
+  const addActivityUC = di.resolve<any>(TOKENS.AddActivityUC);
+  const updateActivityUC = di.resolve<any>(TOKENS.UpdateActivityUC);
+  const deleteActivityUC = di.resolve<any>(TOKENS.DeleteActivityUC);
   
   const [course, setCourse] = useState<any>(null);
   const [students, setStudents] = useState<AuthUser[]>([]);
@@ -65,6 +70,23 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   // Modal state for delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  
+  // Modal state for creating/editing activity
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [isEditActivityMode, setIsEditActivityMode] = useState(false);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [activityName, setActivityName] = useState('');
+  const [activityDescription, setActivityDescription] = useState('');
+  const [activityCategory, setActivityCategory] = useState('');
+  const [activityDueDate, setActivityDueDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Modal state for delete activity confirmation
+  const [showDeleteActivityModal, setShowDeleteActivityModal] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
+  
+  // State for activity assessments
+  const [activityAssessments, setActivityAssessments] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadCourseData();
@@ -120,6 +142,31 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       const activitiesData = await getActivitiesByCourseUC.execute(courseId);
       console.log('[CourseDetailScreen] Activities loaded:', activitiesData.length);
       setActivities(activitiesData);
+      
+      // Verificar evaluaciones activas para cada actividad
+      const assessments: Record<string, boolean> = {};
+      for (const activity of activitiesData) {
+        const activityIdToUse = activity.id || activity._id || '';
+        if (activityIdToUse) {
+          try {
+            const activityAssessments = await getAssessmentsByActivityUC.execute(activityIdToUse);
+            // Verificar si hay alguna evaluación activa (no cancelada y dentro del período)
+            const now = new Date();
+            const hasActiveAssessment = activityAssessments.some((assessment: any) => {
+              if (assessment.cancelled) return false;
+              if (!assessment.startAt || !assessment.endAt) return false;
+              const start = new Date(assessment.startAt);
+              const end = new Date(assessment.endAt);
+              return now >= start && now <= end;
+            });
+            assessments[activityIdToUse] = hasActiveAssessment;
+          } catch (error) {
+            console.error('[CourseDetailScreen] Error getting assessments for activity:', activityIdToUse, error);
+            assessments[activityIdToUse] = false;
+          }
+        }
+      }
+      setActivityAssessments(assessments);
 
     } catch (error) {
       console.error('[CourseDetailScreen] Error loading course data:', error);
@@ -449,8 +496,13 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       setIsRandomGroups(true);
       setShowCategoryModal(true);
     } else if (activeTab === 'activities') {
-      // TODO: Abrir modal de actividades
-      console.log('Abrir modal de actividades');
+      setIsEditActivityMode(false);
+      setEditingActivityId(null);
+      setActivityName('');
+      setActivityDescription('');
+      setActivityCategory('');
+      setActivityDueDate('');
+      setShowActivityModal(true);
     }
   };
 
@@ -500,6 +552,157 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       console.error('[CourseDetailScreen] Error deleting category:', error);
       setShowDeleteModal(false);
       setCategoryToDelete(null);
+    }
+  };
+
+  const handleCreateActivity = async () => {
+    try {
+      if (!activityName.trim() || !activityCategory) {
+        console.error('[CourseDetailScreen] Activity name and category are required');
+        return;
+      }
+
+      if (isEditActivityMode && editingActivityId) {
+        // Modo edición
+        console.log('[CourseDetailScreen] Updating activity:', editingActivityId);
+        
+        await updateActivityUC.execute(editingActivityId, {
+          name: activityName,
+          description: activityDescription,
+          categoryId: activityCategory,
+          ...(activityDueDate && { dueDate: activityDueDate })
+        });
+        
+        console.log('[CourseDetailScreen] Activity updated successfully');
+      } else {
+        // Modo creación
+        const activityId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+
+        console.log('[CourseDetailScreen] Creating activity:', {
+          id: activityId,
+          name: activityName,
+          description: activityDescription,
+          categoryId: activityCategory,
+          dueDate: activityDueDate,
+          courseId
+        });
+
+        const newActivity = {
+          id: activityId,
+          courseId,
+          categoryId: activityCategory,
+          name: activityName,
+          description: activityDescription,
+          visible: true,
+          ...(activityDueDate && { dueDate: activityDueDate })
+        };
+
+        await addActivityUC.execute(newActivity);
+        console.log('[CourseDetailScreen] Activity created successfully');
+      }
+
+      // Recargar actividades
+      const activitiesData = await getActivitiesByCourseUC.execute(courseId);
+      setActivities(activitiesData);
+
+      // Cerrar modal y limpiar campos
+      setShowActivityModal(false);
+      setIsEditActivityMode(false);
+      setEditingActivityId(null);
+      setActivityName('');
+      setActivityDescription('');
+      setActivityCategory('');
+      setActivityDueDate('');
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error creating/updating activity:', error);
+    }
+  };
+
+  const handleEditActivity = (activity: Activity) => {
+    const activityIdToUse = activity.id || activity._id || '';
+    setIsEditActivityMode(true);
+    setEditingActivityId(activityIdToUse);
+    setActivityName(activity.name);
+    setActivityDescription(activity.description || '');
+    setActivityCategory(activity.categoryId);
+    setActivityDueDate(activity.dueDate || '');
+    setShowActivityModal(true);
+  };
+
+  const handleDeleteActivity = (activity: Activity) => {
+    console.log('[CourseDetailScreen] handleDeleteActivity called with:', activity);
+    setActivityToDelete(activity);
+    setShowDeleteActivityModal(true);
+  };
+
+  const confirmDeleteActivity = async () => {
+    if (!activityToDelete) return;
+    
+    const activityIdToUse = activityToDelete.id || activityToDelete._id || '';
+    console.log('[CourseDetailScreen] Confirming deletion of activity:', activityIdToUse);
+    
+    try {
+      console.log('[CourseDetailScreen] User confirmed deletion');
+      await deleteActivityUC.execute(activityIdToUse);
+      
+      // Actualizar actividades en memoria (filtrar la eliminada)
+      const updatedActivities = activities.filter(act => {
+        const actId = act.id || act._id || '';
+        return actId !== activityIdToUse;
+      });
+      setActivities(updatedActivities);
+      
+      console.log('[CourseDetailScreen] Activity deleted successfully');
+      setShowDeleteActivityModal(false);
+      setActivityToDelete(null);
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error deleting activity:', error);
+      setShowDeleteActivityModal(false);
+      setActivityToDelete(null);
+    }
+  };
+
+  const calculateDaysRemaining = (dueDate: string | undefined) => {
+    if (!dueDate) return null;
+    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Normalizar a medianoche
+    
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0); // Normalizar a medianoche
+    
+    const diffTime = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  };
+
+  const handleToggleActivityVisibility = async (activity: Activity) => {
+    try {
+      const activityIdToUse = activity.id || activity._id || '';
+      console.log('[CourseDetailScreen] Toggling visibility for activity:', activityIdToUse);
+
+      await updateActivityUC.execute(activityIdToUse, {
+        visible: !activity.visible
+      });
+
+      // Actualizar actividad en memoria
+      const updatedActivities = activities.map(act => {
+        const actId = act.id || act._id || '';
+        if (actId === activityIdToUse) {
+          return { ...act, visible: !act.visible };
+        }
+        return act;
+      });
+      setActivities(updatedActivities);
+
+      console.log('[CourseDetailScreen] Activity visibility toggled successfully');
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error toggling activity visibility:', error);
     }
   };
 
@@ -629,19 +832,103 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           <Text style={styles.emptyStateText}>No hay actividades registradas</Text>
         </View>
       ) : (
-        activities.map((activity) => (
-          <View key={activity.id || activity._id} style={styles.listItem}>
-            <View style={styles.listItemIcon}>
-              <MaterialCommunityIcons name="clipboard-text" size={24} color="#6C63FF" />
+        activities.map((activity) => {
+          const activityIdToUse = activity.id || activity._id || '';
+          const hasActiveAssessment = activityAssessments[activityIdToUse] || false;
+          
+          // Obtener nombre de la categoría
+          const category = categories.find(cat => {
+            const catId = cat.id || cat._id || '';
+            return catId === activity.categoryId;
+          });
+          const categoryName = category?.name || 'Sin categoría';
+          
+          // Calcular días restantes
+          const daysRemaining = calculateDaysRemaining(activity.dueDate);
+          const isOverdue = daysRemaining !== null && daysRemaining < 0;
+          
+          return (
+            <View key={activityIdToUse} style={[
+              styles.activityCard,
+              isOverdue && styles.activityCardOverdue
+            ]}>
+              <View style={styles.activityCardHeader}>
+                <View style={styles.activityIconCircle}>
+                  <MaterialCommunityIcons name="clipboard-text" size={28} color="#FFFFFF" />
+                </View>
+                <View style={styles.activityHeaderText}>
+                  <Text style={styles.activityTitle}>{activity.name}</Text>
+                  <Text style={styles.activityCategory}>{categoryName}</Text>
+                  {activity.description && (
+                    <Text style={styles.activityDescription} numberOfLines={2}>
+                      {activity.description}
+                    </Text>
+                  )}
+                  {daysRemaining !== null && (
+                    <Text style={[
+                      styles.activityDueDate,
+                      isOverdue && styles.activityDueDateOverdue
+                    ]}>
+                      {isOverdue 
+                        ? `${Math.abs(daysRemaining)} ${Math.abs(daysRemaining) === 1 ? 'día' : 'días'} de retraso`
+                        : daysRemaining === 0
+                        ? 'Vence hoy'
+                        : `Faltan ${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}`
+                      }
+                    </Text>
+                  )}
+                  {hasActiveAssessment && (
+                    <View style={styles.activeAssessmentBadge}>
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#27AE60" />
+                      <Text style={styles.activeAssessmentText}>1 evaluación activa</Text>
+                    </View>
+                  )}
+                </View>
+                {isTeacher && (
+                  <View style={styles.activityActions}>
+                    <TouchableOpacity 
+                      style={styles.activityActionButton}
+                      onPress={() => handleToggleActivityVisibility(activity)}
+                    >
+                      <MaterialCommunityIcons 
+                        name={activity.visible ? "eye" : "eye-off"} 
+                        size={20} 
+                        color={activity.visible ? "#6C63FF" : "#999999"} 
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.activityActionButton}
+                      onPress={() => handleEditActivity(activity)}
+                    >
+                      <MaterialCommunityIcons name="pencil" size={20} color="#5C6BC0" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.activityActionButton}
+                      onPress={() => handleDeleteActivity(activity)}
+                    >
+                      <MaterialCommunityIcons name="delete" size={20} color="#E74C3C" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.activityCardFooter}>
+                <TouchableOpacity 
+                  style={styles.viewActivityButton}
+                  onPress={() => {
+                    navigation.navigate('ActivityDetail', { 
+                      activityId: activityIdToUse,
+                      courseId: course._id || course.id
+                    });
+                  }}
+                >
+                  <Text style={styles.viewActivityButtonText}>Ver actividad</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#6C63FF" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.listItemContent}>
-              <Text style={styles.listItemTitle}>{activity.name}</Text>
-              {activity.description && (
-                <Text style={styles.listItemDescription}>{activity.description}</Text>
-              )}
-            </View>
-          </View>
-        ))
+          );
+        })
       )}
     </>
   );
@@ -921,6 +1208,229 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
               </View>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal para crear actividad */}
+      <Modal
+        visible={showActivityModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowActivityModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalBackground}>
+            <TouchableOpacity 
+              style={styles.modalContent}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Nueva Actividad</Text>
+                <TouchableOpacity onPress={() => setShowActivityModal(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color="#636E72" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                {/* Nombre de actividad */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nombre de la actividad</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: Proyecto Final"
+                    value={activityName}
+                    onChangeText={setActivityName}
+                    placeholderTextColor="#999999"
+                  />
+                </View>
+
+                {/* Descripción */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Descripción (opcional)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Describe la actividad..."
+                    value={activityDescription}
+                    onChangeText={setActivityDescription}
+                    placeholderTextColor="#999999"
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+
+                {/* Fecha de entrega */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Fecha de entrega (opcional)</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={activityDueDate}
+                      onChange={(e: any) => setActivityDueDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        fontSize: '15px',
+                        borderRadius: '8px',
+                        border: '1px solid #E0E0E0',
+                        backgroundColor: '#F8F9FA',
+                        fontFamily: 'inherit',
+                        color: '#2D3436',
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  ) : (
+                    <View style={styles.datePickerWrapper}>
+                      <TouchableOpacity
+                        style={styles.datePickerButton}
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <MaterialCommunityIcons name="calendar" size={20} color="#6C63FF" style={styles.calendarIcon} />
+                        <Text style={styles.datePickerButtonText} numberOfLines={1}>
+                          {activityDueDate || 'Seleccionar fecha (YYYY-MM-DD)'}
+                        </Text>
+                        {activityDueDate && (
+                          <TouchableOpacity
+                            onPress={() => setActivityDueDate('')}
+                            style={styles.clearDateButton}
+                          >
+                            <MaterialCommunityIcons name="close-circle" size={20} color="#999999" />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {showDatePicker && Platform.OS !== 'web' && (
+                    <Modal
+                      visible={showDatePicker}
+                      transparent
+                      animationType="fade"
+                      onRequestClose={() => setShowDatePicker(false)}
+                    >
+                      <View style={styles.datePickerModal}>
+                        <View style={styles.datePickerContainer}>
+                          <View style={styles.datePickerHeader}>
+                            <Text style={styles.datePickerTitle}>Seleccionar fecha</Text>
+                            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                              <MaterialCommunityIcons name="close" size={24} color="#636E72" />
+                            </TouchableOpacity>
+                          </View>
+                          <TextInput
+                            style={styles.dateInput}
+                            placeholder="YYYY-MM-DD (ej: 2025-12-31)"
+                            value={activityDueDate}
+                            onChangeText={setActivityDueDate}
+                            placeholderTextColor="#999999"
+                          />
+                          <TouchableOpacity
+                            style={styles.datePickerConfirmButton}
+                            onPress={() => setShowDatePicker(false)}
+                          >
+                            <Text style={styles.datePickerConfirmText}>Confirmar</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Modal>
+                  )}
+                </View>
+
+                {/* Categoría */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Categoría</Text>
+                  <View style={styles.pickerContainer}>
+                    {categories.length > 0 ? (
+                      <Picker
+                        selectedValue={activityCategory}
+                        onValueChange={setActivityCategory}
+                        style={styles.picker}
+                      >
+                        <Picker.Item label="Selecciona una categoría" value="" />
+                        {categories.map((cat) => {
+                          const catId = cat.id || cat._id || '';
+                          return (
+                            <Picker.Item 
+                              key={catId} 
+                              label={cat.name} 
+                              value={catId} 
+                            />
+                          );
+                        })}
+                      </Picker>
+                    ) : (
+                      <Text style={styles.noCategoriesText}>
+                        No hay categorías disponibles. Crea una categoría primero.
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.createButton, (!activityName.trim() || !activityCategory) && styles.createButtonDisabled]}
+                  onPress={handleCreateActivity}
+                  disabled={!activityName.trim() || !activityCategory}
+                >
+                  <Text style={styles.createButtonText}>{isEditActivityMode ? 'Editar' : 'Crear'}</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Delete Activity Modal */}
+      <Modal
+        visible={showDeleteActivityModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteActivityModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView behavior="padding" style={styles.modalContainer}>
+            <TouchableOpacity
+              style={styles.modalContent}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Eliminar Actividad</Text>
+                <TouchableOpacity 
+                  style={styles.closeModalButton}
+                  onPress={() => setShowDeleteActivityModal(false)}
+                >
+                  <MaterialCommunityIcons name="close" size={24} color="#636E72" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.confirmDeleteText}>
+                  ¿Estás seguro de que deseas eliminar la actividad "{activityToDelete?.name}"?
+                </Text>
+                <Text style={styles.warningText}>
+                  Esta acción no se puede deshacer.
+                </Text>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowDeleteActivityModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={confirmDeleteActivity}
+                >
+                  <Text style={styles.deleteButtonText}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -1419,6 +1929,251 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteModalConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Activity card styles
+  activityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  activityCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  activityIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6C63FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityHeaderText: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 4,
+  },
+  activityCategory: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6C63FF',
+    marginBottom: 6,
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: '#636E72',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  visibilityButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  activityCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  activeAssessmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+    marginBottom: 0,
+  },
+  activeAssessmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#27AE60',
+  },
+  viewActivityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewActivityButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6C63FF',
+  },
+  // Activity modal styles
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+    paddingTop: 12,
+  },
+  pickerContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+  },
+  picker: {
+    backgroundColor: 'transparent',
+  },
+  noCategoriesText: {
+    fontSize: 14,
+    color: '#999999',
+    padding: 16,
+    textAlign: 'center',
+  },
+  // Activity overdue styles
+  activityCardOverdue: {
+    backgroundColor: '#FFE8E8',
+  },
+  activityDueDate: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#636E72',
+    marginTop: 4,
+  },
+  activityDueDateOverdue: {
+    color: '#E74C3C',
+  },
+  activityActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  activityActionButton: {
+    padding: 6,
+  },
+  // Date picker styles
+  datePickerWrapper: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    maxWidth: '100%',
+  },
+  calendarIcon: {
+    marginRight: 8,
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+  },
+  datePickerButtonText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2D3436',
+    flexShrink: 1,
+  },
+  clearDateButton: {
+    padding: 4,
+    marginLeft: 4,
+    flexShrink: 0,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: '#2D3436',
+    marginBottom: 16,
+  },
+  datePickerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2D3436',
+  },
+  datePickerConfirmButton: {
+    backgroundColor: '#6C63FF',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datePickerConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Delete modal styles
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    maxWidth: 500,
+    width: '90%',
+  },
+  closeModalButton: {
+    padding: 4,
+  },
+  confirmDeleteText: {
+    fontSize: 15,
+    color: '#2D3436',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#E74C3C',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    backgroundColor: '#E74C3C',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',

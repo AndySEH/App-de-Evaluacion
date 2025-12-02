@@ -126,7 +126,7 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
-      idColumn: "_id",
+      idColumn: "id",
       idValue: id,
       updates,
     });
@@ -158,7 +158,7 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tableName: this.table,
-        idColumn: "_id",
+        idColumn: "id",
         idValue: id,
       }),
     });

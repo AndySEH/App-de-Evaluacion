@@ -125,7 +125,7 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
-      idColumn: "_id",
+      idColumn: "id",
       idValue: id,
       updates,
     });
@@ -157,7 +157,7 @@ export class ActivityRemoteDataSourceImp implements ActivityDataSource {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tableName: this.table,
-        idColumn: "_id",
+        idColumn: "id",
         idValue: id,
       }),
     });
