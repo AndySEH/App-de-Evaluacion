@@ -98,9 +98,30 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
   }
 
   async addGroup(group: NewGroup): Promise<void> {
-    console.log('[API] POST Add Group - Params:', { group, table: this.table });
+    // 1. PARÁMETROS DE LA SOLICITUD
+    console.log('═══════════════════════════════════════════════');
+    console.log('[API POST] CREAR GRUPO - PARÁMETROS:');
+    console.log('Tabla:', this.table);
+    console.log('Grupo recibido:', group);
+    console.log('Tipo de memberIds:', typeof group.memberIds);
+    console.log('Es array memberIds?:', Array.isArray(group.memberIds));
+    console.log('memberIds valor:', group.memberIds);
+    
+    // Convertir memberIds a string JSON si es array
+    const groupToSend = {
+      ...group,
+      memberIds: Array.isArray(group.memberIds) 
+        ? JSON.stringify(group.memberIds) 
+        : group.memberIds
+    };
+    
+    console.log('Grupo a enviar (después de conversión):', groupToSend);
+    console.log('memberIds después de conversión:', groupToSend.memberIds);
+    console.log('Tipo de memberIds después:', typeof groupToSend.memberIds);
+    console.log('═══════════════════════════════════════════════');
+    
     const url = `${this.baseUrl}/insert`;
-    const body = JSON.stringify({ tableName: this.table, records: [group] });
+    const body = JSON.stringify({ tableName: this.table, records: [groupToSend] });
 
     const response = await this.authorizedFetch(url, {
       method: "POST",
@@ -108,21 +129,62 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       body,
     });
 
+    // 2. ESTADO DE LA SOLICITUD
+    console.log('═══════════════════════════════════════════════');
+    console.log('[API POST] CREAR GRUPO - ESTADO DE LA SOLICITUD:');
+    console.log('HTTP Status:', response.status);
+    console.log('HTTP Status Text:', response.statusText);
+    console.log('Content-Type:', response.headers.get('content-type'));
+    console.log('═══════════════════════════════════════════════');
+    
+    const responseText = await response.text();
+    
+    // 3. JSON DE RESPUESTA
+    console.log('═══════════════════════════════════════════════');
+    console.log('[API POST] CREAR GRUPO - RESPUESTA JSON:');
+    console.log('Respuesta completa:', responseText);
+    try {
+      const jsonResponse = JSON.parse(responseText);
+      console.log('Respuesta parseada:', JSON.stringify(jsonResponse, null, 2));
+    } catch (e) {
+      console.log('No se pudo parsear como JSON, respuesta en texto plano');
+    }
+    console.log('═══════════════════════════════════════════════');
+
     if (response.status === 201) {
-      console.log('[API] POST Add Group - Result: Success');
+      console.log('[API] POST Add Group - Result: Success (201)');
+      return Promise.resolve();
+    }
+    if (response.status === 200) {
+      console.log('[API] POST Add Group - Result: Success (200)');
       return Promise.resolve();
     }
     if (response.status === 401) {
       console.error('[API] POST Add Group - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
+    
+    let errorBody;
+    try {
+      errorBody = JSON.parse(responseText);
+    } catch (e) {
+      errorBody = { message: responseText };
+    }
     console.error('[API] POST Add Group - Error:', response.status, errorBody);
     throw new Error(`Error adding group: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
   async updateGroup(id: string, updates: Partial<Group>): Promise<void> {
-    console.log('[API] PUT Update Group - Params:', { id, updates, table: this.table });
+    console.log('═══════════════════════════════════════════════');
+    console.log('[API PUT] ACTUALIZAR GRUPO - DIAGNÓSTICO memberIds:');
+    console.log('ID del grupo:', id);
+    console.log('Updates recibidos:', updates);
+    console.log('Tipo de memberIds:', typeof updates.memberIds);
+    console.log('Es array memberIds?:', Array.isArray(updates.memberIds));
+    console.log('memberIds valor:', updates.memberIds);
+    console.log('memberIds JSON.stringify:', JSON.stringify(updates.memberIds));
+    console.log('═══════════════════════════════════════════════');
+    
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -130,8 +192,12 @@ export class GroupRemoteDataSourceImp implements GroupDataSource {
       idValue: id,
       updates,
     });
-    console.log('[API] PUT Update Group - Request URL:', url);
-    console.log('[API] PUT Update Group - Request Body:', body);
+    
+    console.log('═══════════════════════════════════════════════');
+    console.log('[API PUT] ACTUALIZAR GRUPO - REQUEST BODY:');
+    console.log('Body completo:', body);
+    console.log('Body parseado:', JSON.parse(body));
+    console.log('═══════════════════════════════════════════════');
 
     const response = await this.authorizedFetch(url, {
       method: "PUT",

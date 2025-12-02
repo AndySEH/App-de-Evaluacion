@@ -99,8 +99,16 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
 
   async addCategory(category: NewCategory): Promise<void> {
     console.log('[API] POST Add Category - Params:', { category, table: this.table });
+    
+    // Mapear randomGroups a random para la API
+    const apiCategory: any = { ...category };
+    if ('randomGroups' in category) {
+      apiCategory.random = category.randomGroups;
+      delete apiCategory.randomGroups;
+    }
+    
     const url = `${this.baseUrl}/insert`;
-    const body = JSON.stringify({ tableName: this.table, records: [category] });
+    const body = JSON.stringify({ tableName: this.table, records: [apiCategory] });
     console.log('[API] POST Add Category - Request URL:', url);
     console.log('[API] POST Add Category - Request Body:', body);
 
@@ -131,7 +139,7 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
-      idColumn: "_id",
+      idColumn: "id",
       idValue: id,
       updates,
     });
@@ -163,10 +171,12 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tableName: this.table,
-        idColumn: "_id",
+        idColumn: "id",
         idValue: id,
       }),
     });
+
+    console.log('[API] DELETE Category - ID:', id);
 
     if (response.status === 200) {
       console.log('[API] DELETE Category - Result: Success');

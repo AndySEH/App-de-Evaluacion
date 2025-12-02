@@ -101,12 +101,21 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
       const groupsData = await getGroupsByCategoryUC.execute(categoryIdToUse);
       setGroups(groupsData);
 
+      console.log('[CategoryDetailScreen] Checking auto-creation conditions:', {
+        randomGroups: cat.randomGroups,
+        groupsCount: groupsData.length,
+        studentsCount: studentsList.length,
+        categoryId: categoryIdToUse,
+        categoryName: cat.name
+      });
+
       // Cargar estudiantes sin grupo al inicio
       const studentsWithoutGroup = await getStudentsWithoutGroupUC.execute(courseId, categoryIdToUse);
       setAvailableStudents(studentsWithoutGroup);
 
       // Si es categoría aleatoria y no hay grupos, crear automáticamente
       if (cat.randomGroups && groupsData.length === 0 && studentsList.length > 0) {
+        console.log('[CategoryDetailScreen] Creating random groups automatically...');
         await createRandomGroups(cat, studentsList);
       } else if (cat.randomGroups && groupsData.length > 0) {
         // Verificar si hay estudiantes sin asignar
@@ -119,9 +128,15 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
 
   const createRandomGroups = async (cat: Category, studentsList: AuthUser[]) => {
     try {
+      console.log('[CategoryDetailScreen] Starting random group creation...');
+      console.log('[CategoryDetailScreen] Category details:', cat);
+      console.log('[CategoryDetailScreen] Students to assign:', studentsList.length);
+      
       const maxPerGroup = cat.maxStudentsPerGroup || 5;
       const shuffledStudents = [...studentsList].sort(() => Math.random() - 0.5);
       const numberOfGroups = Math.ceil(shuffledStudents.length / maxPerGroup);
+
+      console.log(`[CategoryDetailScreen] Will create ${numberOfGroups} groups with max ${maxPerGroup} students each`);
 
       const newGroups: Group[] = [];
       // Usar id en lugar de _id para la relación
@@ -135,21 +150,35 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
           return v.toString(16);
         });
 
+        // Paso 1: Crear grupo vacío
         const newGroup: NewGroup = {
           id: groupId,
           courseId,
           categoryId: categoryIdToUse,
           name: `Grupo ${i + 1}`,
-          memberIds: groupStudents.map(s => s.userId || '')
+          memberIds: []  // Crear vacío inicialmente
         };
 
+        console.log(`[CategoryDetailScreen] Step 1 - Creating empty group ${i + 1}:`, newGroup);
         await addGroupUC.execute(newGroup);
-        newGroups.push(newGroup as Group);
+
+        // Paso 2: Actualizar el grupo con los miembros
+        const memberIds = groupStudents.map(s => s.userId || '');
+        console.log(`[CategoryDetailScreen] Step 2 - Adding ${memberIds.length} members to group ${i + 1}:`, memberIds);
+        await updateGroupUC.execute(groupId, {
+          memberIds: memberIds
+        });
+
+        newGroups.push({ ...newGroup, memberIds: memberIds } as Group);
       }
+
+      console.log(`[CategoryDetailScreen] Successfully created ${newGroups.length} groups`);
 
       // Recargar grupos
       const updatedGroups = await getGroupsByCategoryUC.execute(categoryIdToUse);
       setGroups(updatedGroups);
+      
+      console.log('[CategoryDetailScreen] Groups reloaded, count:', updatedGroups.length);
     } catch (error) {
       console.error('[CategoryDetailScreen] Error creating random groups:', error);
     }

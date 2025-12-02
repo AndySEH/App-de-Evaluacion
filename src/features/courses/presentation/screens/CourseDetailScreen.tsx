@@ -6,9 +6,14 @@ import { AuthUser } from "@/src/features/auth/domain/entities/AuthUser";
 import { GetUsersByIdsUseCase } from "@/src/features/auth/domain/usecases/GetUsersByIdsUseCase";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { Category, NewCategory } from "@/src/features/courses/domain/entities/Category";
+import { NewGroup } from "@/src/features/courses/domain/entities/Group";
 import { AddCategoryUseCase } from "@/src/features/courses/domain/usecases/AddCategoryUseCase";
+import { AddGroupUseCase } from "@/src/features/courses/domain/usecases/AddGroupUseCase";
+import { DeleteCategoryUseCase } from "@/src/features/courses/domain/usecases/DeleteCategoryUseCase";
 import { GetCategoriesByCourseUseCase } from "@/src/features/courses/domain/usecases/GetCategoriesByCourseUseCase";
 import { GetGroupsCountByCategoryUseCase } from "@/src/features/courses/domain/usecases/GetGroupsCountByCategoryUseCase";
+import { UpdateCategoryUseCase } from "@/src/features/courses/domain/usecases/UpdateCategoryUseCase";
+import { UpdateGroupUseCase } from "@/src/features/courses/domain/usecases/UpdateGroupUseCase";
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
@@ -31,7 +36,13 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const getCategoriesByCourseUC = di.resolve<GetCategoriesByCourseUseCase>(TOKENS.GetCategoriesByCourseUC);
   const getActivitiesByCourseUC = di.resolve<GetActivitiesByCourseUseCase>(TOKENS.GetActivitiesByCourseUC);
   const addCategoryUC = di.resolve<AddCategoryUseCase>(TOKENS.AddCategoryUC);
+  const updateCategoryUC = di.resolve<UpdateCategoryUseCase>(TOKENS.UpdateCategoryUC);
+  const deleteCategoryUC = di.resolve<DeleteCategoryUseCase>(TOKENS.DeleteCategoryUC);
   const getGroupsCountByCategoryUC = di.resolve<GetGroupsCountByCategoryUseCase>(TOKENS.GetGroupsCountByCategoryUC);
+  const getGroupsByCategoryUC = di.resolve<any>(TOKENS.GetGroupsByCategoryUC);
+  const addGroupUC = di.resolve<AddGroupUseCase>(TOKENS.AddGroupUC);
+  const updateGroupUC = di.resolve<UpdateGroupUseCase>(TOKENS.UpdateGroupUC);
+  const deleteGroupUC = di.resolve<any>(TOKENS.DeleteGroupUC);
   
   const [course, setCourse] = useState<any>(null);
   const [students, setStudents] = useState<AuthUser[]>([]);
@@ -39,13 +50,21 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('categories');
   const [isLoading, setIsLoading] = useState(true);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [categoryGroupCounts, setCategoryGroupCounts] = useState<Record<string, number>>({});
   
-  // Modal state for creating category
+  // Modal state for creating/editing category
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [maxStudents, setMaxStudents] = useState('');
   const [isRandomGroups, setIsRandomGroups] = useState(true);
+  
+  // Modal state for delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
   useEffect(() => {
     loadCourseData();
@@ -60,6 +79,10 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       const courseData = await getCourse(courseId);
       console.log('[CourseDetailScreen] Course data:', courseData);
       setCourse(courseData);
+      
+      // Verificar si el usuario es docente
+      const userIsTeacher = courseData?.teacherId === (user?._id || user?.id);
+      setIsTeacher(userIsTeacher);
 
       // Obtener estudiantes si existen IDs
       if (courseData?.studentIds && courseData.studentIds.length > 0) {
@@ -107,31 +130,64 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
 
   const handleCreateCategory = async () => {
     try {
-      // Generar un UUID v4 para la categoría
-      const categoryId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-      
-      console.log('[CourseDetailScreen] Creating category:', {
-        id: categoryId,
-        name: categoryName,
-        maxStudents: maxStudents ? parseInt(maxStudents) : undefined,
-        randomGroups: isRandomGroups,
-        courseId
-      });
+      if (isEditMode && editingCategoryId && editingCategory) {
+        // Modo edición
+        console.log('[CourseDetailScreen] Updating category:', editingCategoryId);
+        
+        const newMaxStudents = maxStudents ? parseInt(maxStudents) : undefined;
+        const oldMaxStudents = editingCategory.maxStudentsPerGroup;
+        
+        await updateCategoryUC.execute(editingCategoryId, {
+          name: categoryName,
+          randomGroups: isRandomGroups,
+          ...(newMaxStudents && { maxStudentsPerGroup: newMaxStudents })
+        });
+        
+        console.log('[CourseDetailScreen] Category updated successfully');
+        
+        // Si cambió maxStudentsPerGroup, reorganizar grupos
+        if (newMaxStudents && oldMaxStudents && newMaxStudents !== oldMaxStudents) {
+          console.log('[CourseDetailScreen] Max students changed from', oldMaxStudents, 'to', newMaxStudents);
+          await handleGroupReorganization(editingCategoryId, newMaxStudents, isRandomGroups);
+        }
+      } else {
+        // Modo creación
+        const categoryId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+        
+        console.log('[CourseDetailScreen] Creating category:', {
+          id: categoryId,
+          name: categoryName,
+          maxStudents: maxStudents ? parseInt(maxStudents) : undefined,
+          randomGroups: isRandomGroups,
+          courseId
+        });
 
-      const newCategory: NewCategory = {
-        id: categoryId,
-        courseId,
-        name: categoryName,
-        randomGroups: isRandomGroups,
-        ...(maxStudents && { maxStudentsPerGroup: parseInt(maxStudents) })
-      };
+        const newCategory: NewCategory = {
+          id: categoryId,
+          courseId,
+          name: categoryName,
+          randomGroups: isRandomGroups,
+          ...(maxStudents && { maxStudentsPerGroup: parseInt(maxStudents) })
+        };
 
-      await addCategoryUC.execute(newCategory);
-      console.log('[CourseDetailScreen] Category created successfully');
+        await addCategoryUC.execute(newCategory);
+        console.log('[CourseDetailScreen] Category created successfully');
+
+        // Si es categoría aleatoria, crear grupos automáticamente con estudiantes
+        if (isRandomGroups && students.length > 0) {
+          console.log('[CourseDetailScreen] Creating random groups for new category...');
+          await createRandomGroupsForCategory(categoryId, newCategory, students);
+        }
+        // Si es categoría libre, crear grupos vacíos
+        else if (!isRandomGroups && students.length > 0) {
+          console.log('[CourseDetailScreen] Creating empty groups for free category...');
+          await createEmptyGroupsForCategory(categoryId, newCategory, students.length);
+        }
+      }
 
       // Recargar categorías
       const categoriesData = await getCategoriesByCourseUC.execute(courseId);
@@ -155,20 +211,295 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
 
       // Cerrar modal y limpiar campos
       setShowCategoryModal(false);
+      setIsEditMode(false);
+      setEditingCategoryId(null);
+      setEditingCategory(null);
       setCategoryName('');
       setMaxStudents('');
       setIsRandomGroups(true);
     } catch (error) {
-      console.error('[CourseDetailScreen] Error creating category:', error);
+      console.error('[CourseDetailScreen] Error creating/updating category:', error);
+    }
+  };
+
+  const createRandomGroupsForCategory = async (categoryId: string, category: NewCategory, studentsList: AuthUser[]) => {
+    try {
+      const maxPerGroup = category.maxStudentsPerGroup || 5;
+      const shuffledStudents = [...studentsList].sort(() => Math.random() - 0.5);
+      const numberOfGroups = Math.ceil(shuffledStudents.length / maxPerGroup);
+
+      console.log(`[CourseDetailScreen] Creating ${numberOfGroups} random groups with max ${maxPerGroup} students each`);
+
+      for (let i = 0; i < numberOfGroups; i++) {
+        const groupStudents = shuffledStudents.slice(i * maxPerGroup, (i + 1) * maxPerGroup);
+        const groupId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+
+        // Paso 1: Crear grupo vacío
+        const newGroup: NewGroup = {
+          id: groupId,
+          courseId,
+          categoryId: categoryId,
+          name: `Grupo ${i + 1}`,
+          memberIds: []  // Crear vacío inicialmente
+        };
+
+        console.log(`[CourseDetailScreen] Creating empty group ${i + 1}`);
+        await addGroupUC.execute(newGroup);
+
+        // Paso 2: Actualizar el grupo con los miembros
+        const memberIds = groupStudents.map(s => s.userId || '');
+        console.log(`[CourseDetailScreen] Adding ${memberIds.length} members to group ${i + 1}`);
+        await updateGroupUC.execute(groupId, {
+          memberIds: memberIds
+        });
+      }
+
+      console.log(`[CourseDetailScreen] Successfully created ${numberOfGroups} groups for category`);
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error creating random groups for category:', error);
+    }
+  };
+
+  const createEmptyGroupsForCategory = async (categoryId: string, category: NewCategory, totalStudents: number) => {
+    try {
+      const maxPerGroup = category.maxStudentsPerGroup || 5;
+      // Calcular cantidad mínima de grupos necesarios
+      const numberOfGroups = Math.ceil(totalStudents / maxPerGroup);
+
+      console.log(`[CourseDetailScreen] Creating ${numberOfGroups} empty groups with max ${maxPerGroup} students each for free category`);
+
+      for (let i = 0; i < numberOfGroups; i++) {
+        const groupId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+
+        // Crear grupo vacío
+        const newGroup: NewGroup = {
+          id: groupId,
+          courseId,
+          categoryId: categoryId,
+          name: `Grupo ${i + 1}`,
+          memberIds: []  // Grupos vacíos para que los estudiantes se asignen libremente
+        };
+
+        console.log(`[CourseDetailScreen] Creating empty group ${i + 1}`);
+        await addGroupUC.execute(newGroup);
+      }
+
+      console.log(`[CourseDetailScreen] Successfully created ${numberOfGroups} empty groups for free category`);
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error creating empty groups for category:', error);
+    }
+  };
+
+  const handleGroupReorganization = async (categoryId: string, newMaxStudents: number, isRandom: boolean) => {
+    try {
+      console.log('[CourseDetailScreen] Reorganizing groups for category:', categoryId);
+      
+      // Obtener grupos actuales de la categoría
+      const currentGroups = await getGroupsByCategoryUC.execute(categoryId);
+      console.log('[CourseDetailScreen] Current groups:', currentGroups.length);
+      
+      if (isRandom) {
+        // Categoría aleatoria: reorganizar todos los grupos
+        await reorganizeRandomGroups(categoryId, currentGroups, newMaxStudents);
+      } else {
+        // Categoría libre: ajustar capacidad y crear grupos si es necesario
+        await adjustFreeGroups(categoryId, currentGroups, newMaxStudents);
+      }
+      
+      console.log('[CourseDetailScreen] Group reorganization completed');
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error reorganizing groups:', error);
+    }
+  };
+
+  const reorganizeRandomGroups = async (categoryId: string, currentGroups: any[], newMaxStudents: number) => {
+    try {
+      // Recopilar todos los estudiantes de todos los grupos
+      const allStudents: string[] = [];
+      for (const group of currentGroups) {
+        if (group.memberIds && group.memberIds.length > 0) {
+          allStudents.push(...group.memberIds);
+        }
+      }
+      
+      console.log('[CourseDetailScreen] Total students to redistribute:', allStudents.length);
+      
+      // Eliminar todos los grupos existentes
+      for (const group of currentGroups) {
+        const groupId = group.id || group._id || '';
+        if (groupId) {
+          await deleteGroupUC.execute(groupId);
+        }
+      }
+      
+      // Calcular nuevo número de grupos necesarios
+      const newNumberOfGroups = Math.ceil(allStudents.length / newMaxStudents);
+      console.log('[CourseDetailScreen] Creating', newNumberOfGroups, 'new random groups');
+      
+      // Mezclar estudiantes aleatoriamente
+      const shuffledStudents = [...allStudents].sort(() => Math.random() - 0.5);
+      
+      // Crear nuevos grupos con estudiantes distribuidos
+      for (let i = 0; i < newNumberOfGroups; i++) {
+        const groupStudents = shuffledStudents.slice(i * newMaxStudents, (i + 1) * newMaxStudents);
+        const groupId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+
+        const newGroup: NewGroup = {
+          id: groupId,
+          courseId,
+          categoryId: categoryId,
+          name: `Grupo ${i + 1}`,
+          memberIds: []
+        };
+
+        await addGroupUC.execute(newGroup);
+        
+        if (groupStudents.length > 0) {
+          await updateGroupUC.execute(groupId, {
+            memberIds: groupStudents
+          });
+        }
+      }
+      
+      console.log('[CourseDetailScreen] Random groups reorganized successfully');
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error reorganizing random groups:', error);
+    }
+  };
+
+  const adjustFreeGroups = async (categoryId: string, currentGroups: any[], newMaxStudents: number) => {
+    try {
+      // Contar total de estudiantes en todos los grupos
+      let totalStudents = 0;
+      for (const group of currentGroups) {
+        totalStudents += group.memberIds?.length || 0;
+      }
+      
+      // Calcular número mínimo de grupos necesarios
+      const minRequiredGroups = Math.ceil(totalStudents / newMaxStudents);
+      console.log('[CourseDetailScreen] Min required groups:', minRequiredGroups, 'Current groups:', currentGroups.length);
+      
+      // Si necesitamos más grupos, crearlos vacíos
+      if (minRequiredGroups > currentGroups.length) {
+        const groupsToCreate = minRequiredGroups - currentGroups.length;
+        console.log('[CourseDetailScreen] Creating', groupsToCreate, 'additional empty groups');
+        
+        for (let i = 0; i < groupsToCreate; i++) {
+          const groupId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+
+          const newGroup: NewGroup = {
+            id: groupId,
+            courseId,
+            categoryId: categoryId,
+            name: `Grupo ${currentGroups.length + i + 1}`,
+            memberIds: []
+          };
+
+          await addGroupUC.execute(newGroup);
+        }
+      }
+      
+      // Revisar si algún grupo excede la capacidad máxima
+      for (const group of currentGroups) {
+        const groupId = group.id || group._id || '';
+        const memberIds = group.memberIds || [];
+        
+        if (memberIds.length > newMaxStudents) {
+          console.log('[CourseDetailScreen] Group', group.name, 'exceeds capacity. Removing excess members.');
+          
+          // Mantener solo los primeros newMaxStudents miembros
+          const trimmedMembers = memberIds.slice(0, newMaxStudents);
+          await updateGroupUC.execute(groupId, {
+            memberIds: trimmedMembers
+          });
+          
+          console.log('[CourseDetailScreen] Removed', memberIds.length - newMaxStudents, 'members from', group.name);
+        }
+      }
+      
+      console.log('[CourseDetailScreen] Free groups adjusted successfully');
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error adjusting free groups:', error);
     }
   };
 
   const handleOpenModal = () => {
     if (activeTab === 'categories') {
+      setIsEditMode(false);
+      setEditingCategoryId(null);
+      setEditingCategory(null);
+      setCategoryName('');
+      setMaxStudents('');
+      setIsRandomGroups(true);
       setShowCategoryModal(true);
     } else if (activeTab === 'activities') {
       // TODO: Abrir modal de actividades
       console.log('Abrir modal de actividades');
+    }
+  };
+
+  const handleEditCategory = (category: Category) => {
+    const categoryIdToUse = category.id || category._id || '';
+    setIsEditMode(true);
+    setEditingCategoryId(categoryIdToUse);
+    setEditingCategory(category); // Guardar categoría completa
+    setCategoryName(category.name);
+    setMaxStudents(category.maxStudentsPerGroup?.toString() || '');
+    setIsRandomGroups(category.randomGroups);
+    setShowCategoryModal(true);
+  };
+
+  const handleDeleteCategory = (category: Category) => {
+    console.log('[CourseDetailScreen] handleDeleteCategory called with:', category);
+    setCategoryToDelete(category);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    
+    const categoryIdToUse = categoryToDelete.id || categoryToDelete._id || '';
+    console.log('[CourseDetailScreen] Confirming deletion of category:', categoryIdToUse);
+    
+    try {
+      console.log('[CourseDetailScreen] User confirmed deletion');
+      await deleteCategoryUC.execute(categoryIdToUse);
+      
+      // Actualizar categorías en memoria (filtrar la eliminada)
+      const updatedCategories = categories.filter(cat => {
+        const catId = cat.id || cat._id || '';
+        return catId !== categoryIdToUse;
+      });
+      setCategories(updatedCategories);
+      
+      // Actualizar conteos de grupos (remover la categoría eliminada)
+      const updatedGroupCounts = { ...categoryGroupCounts };
+      delete updatedGroupCounts[categoryIdToUse];
+      setCategoryGroupCounts(updatedGroupCounts);
+      
+      console.log('[CourseDetailScreen] Category deleted successfully');
+      setShowDeleteModal(false);
+      setCategoryToDelete(null);
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error deleting category:', error);
+      setShowDeleteModal(false);
+      setCategoryToDelete(null);
     }
   };
 
@@ -231,42 +562,60 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           const groupCount = categoryGroupCounts[categoryIdToUse] || 0;
           
           return (
-          <TouchableOpacity 
-            key={categoryIdToUse} 
-            style={styles.categoryCard}
-            onPress={() => navigation.navigate('CategoryDetail', { 
-              categoryId: categoryIdToUse, 
-              courseId 
-            })}
-          >
-            <View style={styles.categoryHeader}>
-              <View style={styles.categoryIconCircle}>
-                <MaterialCommunityIcons name="folder" size={28} color="#FFFFFF" />
-              </View>
-              <View style={styles.categoryHeaderText}>
-                <Text style={styles.categoryTitle}>{category.name}</Text>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>
-                    {category.randomGroups ? 'Aleatorio' : 'Libre'}
-                  </Text>
+          <View key={categoryIdToUse} style={styles.categoryCard}>
+            <TouchableOpacity 
+              style={styles.categoryCardContent}
+              onPress={() => navigation.navigate('CategoryDetail', { 
+                categoryId: categoryIdToUse, 
+                courseId 
+              })}
+            >
+              <View style={styles.categoryHeader}>
+                <View style={styles.categoryIconCircle}>
+                  <MaterialCommunityIcons name="folder" size={28} color="#FFFFFF" />
+                </View>
+                <View style={styles.categoryHeaderText}>
+                  <Text style={styles.categoryTitle}>{category.name}</Text>
+                  <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryBadgeText}>
+                      {category.randomGroups ? 'Aleatorio' : 'Libre'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            <View style={styles.categoryFooter}>
-              <View style={styles.categoryInfoItem}>
-                <MaterialCommunityIcons name="account-group" size={16} color="#636E72" />
-                <Text style={styles.categoryInfoText}>
-                  Max {category.maxStudentsPerGroup || 0} por grupo
+              <View style={styles.categoryFooter}>
+                <View style={styles.categoryInfoItem}>
+                  <MaterialCommunityIcons name="account-group" size={16} color="#636E72" />
+                  <Text style={styles.categoryInfoText}>
+                    Max {category.maxStudentsPerGroup || 0} por grupo
+                  </Text>
+                </View>
+                <Text style={styles.categoryGroupsText}>
+                  {groupCount === 0 
+                    ? 'Sin grupos aún' 
+                    : `${groupCount} ${groupCount === 1 ? 'grupo creado' : 'grupos creados'}`
+                  }
                 </Text>
               </View>
-              <Text style={styles.categoryGroupsText}>
-                {groupCount === 0 
-                  ? 'Sin grupos aún' 
-                  : `${groupCount} ${groupCount === 1 ? 'grupo creado' : 'grupos creados'}`
-                }
-              </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            
+            {isTeacher && (
+              <View style={styles.categoryActions}>
+                <TouchableOpacity 
+                  style={styles.categoryActionButton}
+                  onPress={() => handleEditCategory(category)}
+                >
+                  <MaterialCommunityIcons name="pencil" size={20} color="#5C6BC0" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.categoryActionButton}
+                  onPress={() => handleDeleteCategory(category)}
+                >
+                  <MaterialCommunityIcons name="delete" size={20} color="#E74C3C" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         )})
       )}
     </>
@@ -418,8 +767,8 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
         </ScrollView>
       </View>
 
-      {/* Floating Action Button - Mostrar en categorías y actividades */}
-      {(activeTab === 'categories' || activeTab === 'activities') && (
+      {/* Floating Action Button - Mostrar solo para docentes en categorías y actividades */}
+      {isTeacher && (activeTab === 'categories' || activeTab === 'activities') && (
         <TouchableOpacity 
           style={styles.fab}
           onPress={handleOpenModal}
@@ -462,7 +811,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
               onPress={(e) => e.stopPropagation()}
             >
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nueva Categoría</Text>
+                <Text style={styles.modalTitle}>{isEditMode ? 'Editar Categoría' : 'Nueva Categoría'}</Text>
                 <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#636E72" />
                 </TouchableOpacity>
@@ -524,12 +873,55 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
                   onPress={handleCreateCategory}
                   disabled={!categoryName.trim()}
                 >
-                  <Text style={styles.createButtonText}>Crear</Text>
+                  <Text style={styles.createButtonText}>{isEditMode ? 'Editar' : 'Crear'}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Modal de confirmación de eliminación */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBackground}>
+            <View style={styles.deleteModalContent}>
+              <View style={styles.deleteModalIcon}>
+                <MaterialCommunityIcons name="alert-circle" size={48} color="#E74C3C" />
+              </View>
+              
+              <Text style={styles.deleteModalTitle}>Eliminar categoría</Text>
+              <Text style={styles.deleteModalMessage}>
+                ¿Estás seguro de que deseas eliminar la categoría "{categoryToDelete?.name}"? 
+                Esta acción no se puede deshacer.
+              </Text>
+
+              <View style={styles.deleteModalButtons}>
+                <TouchableOpacity
+                  style={styles.deleteModalCancelButton}
+                  onPress={() => {
+                    setShowDeleteModal(false);
+                    setCategoryToDelete(null);
+                  }}
+                >
+                  <Text style={styles.deleteModalCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.deleteModalConfirmButton}
+                  onPress={confirmDeleteCategory}
+                >
+                  <Text style={styles.deleteModalConfirmText}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -685,12 +1077,30 @@ const styles = StyleSheet.create({
   categoryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+  },
+  categoryCardContent: {
+    padding: 16,
+  },
+  categoryActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F5',
+    paddingTop: 12,
+  },
+  categoryActionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F7',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -953,6 +1363,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCCCCC',
   },
   createButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  deleteModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    maxWidth: 400,
+    width: '90%',
+    alignItems: 'center',
+  },
+  deleteModalIcon: {
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3436',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalMessage: {
+    fontSize: 15,
+    color: '#636E72',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteModalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  deleteModalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#636E72',
+  },
+  deleteModalConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    backgroundColor: '#E74C3C',
+    alignItems: 'center',
+  },
+  deleteModalConfirmText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
