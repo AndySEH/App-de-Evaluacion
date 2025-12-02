@@ -20,4 +20,8 @@ export class CourseRepositoryImpl implements CourseRepository {
   async addCourse(course: Course): Promise<void> {
     return this.remote.addCourse(course as any);
   }
+
+  async joinCourseByCode(studentId: string, registrationCode: string): Promise<Course> {
+    return this.remote.joinCourseByCode(studentId, registrationCode);
+  }
 }

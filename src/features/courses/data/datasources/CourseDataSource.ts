@@ -5,4 +5,6 @@ export interface CourseDataSource {
   getCoursesByStudent(studentId: string): Promise<Course[]>;
   getCourseById(id: string): Promise<Course | undefined>;
   addCourse(course: NewCourse): Promise<void>;
+  joinCourseByCode(studentId: string, registrationCode: string): Promise<Course>;
+  getAllCourses(): Promise<Course[]>;
 }

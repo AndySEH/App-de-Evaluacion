@@ -5,4 +5,5 @@ export interface CourseRepository {
   getCoursesByStudent(studentId: string): Promise<Course[]>;
   getCourseById(id: string): Promise<Course | undefined>;
   addCourse(course: Course): Promise<void>;
+  joinCourseByCode(studentId: string, registrationCode: string): Promise<Course>;
 }

@@ -24,6 +24,7 @@ import { AddCourseUseCase } from "@/src/features/courses/domain/usecases/AddCour
 import { GetCourseByIdUseCase } from "@/src/features/courses/domain/usecases/GetCourseByIdUseCase";
 import { GetCoursesByStudentUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByStudentUseCase";
 import { GetCoursesByTeacherUseCase } from "@/src/features/courses/domain/usecases/GetCoursesByTeacherUseCase";
+import { JoinCourseByCodeUseCase } from "@/src/features/courses/domain/usecases/JoinCourseByCodeUseCase";
 
 // Categories
 import { CategoryRemoteDataSourceImp } from "@/src/features/courses/data/datasources/CategoryRemoteDataSourceImp";
@@ -109,7 +110,8 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
             .register(TOKENS.GetCoursesByTeacherUC, new GetCoursesByTeacherUseCase(courseRepo))
             .register(TOKENS.GetCoursesByStudentUC, new GetCoursesByStudentUseCase(courseRepo))
             .register(TOKENS.GetCourseByIdUC, new GetCourseByIdUseCase(courseRepo))
-            .register(TOKENS.AddCourseUC, new AddCourseUseCase(courseRepo));
+            .register(TOKENS.AddCourseUC, new AddCourseUseCase(courseRepo))
+            .register(TOKENS.JoinCourseByCodeUC, new JoinCourseByCodeUseCase(courseRepo));
 
         // Categories
         const categoryRemoteDS = new CategoryRemoteDataSourceImp(authDS);

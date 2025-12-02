@@ -13,12 +13,14 @@ import { AddCourseUseCase } from "../../domain/usecases/AddCourseUseCase";
 import { GetCourseByIdUseCase } from "../../domain/usecases/GetCourseByIdUseCase";
 import { GetCoursesByStudentUseCase } from "../../domain/usecases/GetCoursesByStudentUseCase";
 import { GetCoursesByTeacherUseCase } from "../../domain/usecases/GetCoursesByTeacherUseCase";
+import { JoinCourseByCodeUseCase } from "../../domain/usecases/JoinCourseByCodeUseCase";
 
 type CourseContextType = {
   courses: Course[];
   isLoading: boolean;
   error: string | null;
   addCourse: (course: NewCourse, userId: string) => Promise<void>;
+  joinCourseByCode: (studentId: string, registrationCode: string) => Promise<void>;
   getCourse: (id: string) => Promise<Course | undefined>;
   getCoursesByTeacher: (teacherId: string) => Promise<void>;
   getCoursesByStudent: (studentId: string) => Promise<void>;
@@ -35,6 +37,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
   const getCourseByIdUC = di.resolve<GetCourseByIdUseCase>(TOKENS.GetCourseByIdUC);
   const getCoursesByTeacherUC = di.resolve<GetCoursesByTeacherUseCase>(TOKENS.GetCoursesByTeacherUC);
   const getCoursesByStudentUC = di.resolve<GetCoursesByStudentUseCase>(TOKENS.GetCoursesByStudentUC);
+  const joinCourseByCodeUC = di.resolve<JoinCourseByCodeUseCase>(TOKENS.JoinCourseByCodeUC);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,12 +139,31 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const joinCourseByCode = async (studentId: string, registrationCode: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[CourseContext] Joining course with code:', registrationCode);
+      await joinCourseByCodeUC.execute(studentId, registrationCode);
+      console.log('[CourseContext] Joined successfully, refreshing list...');
+      // Recargar la lista de cursos después de unirse
+      await getAllCourses(studentId);
+    } catch (e) {
+      console.error('[CourseContext] Error joining course:', e);
+      setError((e as Error).message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = useMemo(
     () => ({
       courses,
       isLoading,
       error,
       addCourse,
+      joinCourseByCode,
       getCourse,
       getCoursesByTeacher,
       getCoursesByStudent,

@@ -87,6 +87,12 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   
   // State for activity assessments
   const [activityAssessments, setActivityAssessments] = useState<Record<string, boolean>>({});
+  
+  // Modal state for inviting students
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [studentEmail, setStudentEmail] = useState('');
+  const [invitationSuccess, setInvitationSuccess] = useState(false);
+  const [invitationError, setInvitationError] = useState('');
 
   useEffect(() => {
     loadCourseData();
@@ -708,6 +714,99 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
     }
   };
 
+  const handleOpenInviteModal = () => {
+    console.log('[CourseDetailScreen] Opening invite modal');
+    setStudentEmail('');
+    setInvitationSuccess(false);
+    setInvitationError('');
+    setShowInviteModal(true);
+  };
+
+  const handleSendInvitation = async () => {
+    if (!studentEmail.trim()) {
+      console.log('[CourseDetailScreen] Email is empty');
+      setInvitationError('Por favor ingresa un correo electrónico');
+      return;
+    }
+
+    if (!course) {
+      console.error('[CourseDetailScreen] No course loaded');
+      setInvitationError('Error: No se pudo cargar el curso');
+      return;
+    }
+
+    try {
+      console.log('[CourseDetailScreen] Sending invitation to:', studentEmail);
+      
+      const courseId = course.id || course._id;
+      if (!courseId) {
+        throw new Error('Course ID not found');
+      }
+
+      // Obtener las invitaciones actuales (lista de emails)
+      const currentInvitations = Array.isArray(course.invitations) ? course.invitations : [];
+
+      // Verificar si ya existe una invitación para este email
+      if (currentInvitations.includes(studentEmail.trim())) {
+        console.log('[CourseDetailScreen] Invitation already exists for this email');
+        setInvitationError('Ya existe una invitación pendiente para este correo');
+        return;
+      }
+
+      // Agregar el nuevo email a la lista
+      const updatedInvitations = [...currentInvitations, studentEmail.trim()];
+
+      // Actualizar el curso con la nueva lista de invitaciones
+      await updateCourseInvitations(courseId, updatedInvitations);
+
+      console.log('[CourseDetailScreen] Invitation sent successfully');
+      
+      // Mostrar mensaje de éxito
+      setInvitationSuccess(true);
+      setInvitationError('');
+      setStudentEmail('');
+
+      // Actualizar el curso local
+      setCourse({ ...course, invitations: updatedInvitations });
+    } catch (error) {
+      console.error('[CourseDetailScreen] Error sending invitation:', error);
+      setInvitationError('Error al enviar la invitación. Por favor intenta de nuevo.');
+      setInvitationSuccess(false);
+    }
+  };
+
+  const updateCourseInvitations = async (courseId: string, invitations: any[]) => {
+    const { LocalPreferencesAsyncStorage } = await import('@/src/core/LocalPreferencesAsyncStorage');
+    const prefs = LocalPreferencesAsyncStorage.getInstance();
+    const token = await prefs.retrieveData<string>('token');
+    
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    const baseUrl = `https://roble-api.openlab.uninorte.edu.co/database/${process.env.EXPO_PUBLIC_ROBLE_PROJECT_ID}`;
+    
+    const response = await fetch(`${baseUrl}/update`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tableName: 'CourseModel',
+        idColumn: 'id',
+        idValue: courseId,
+        updates: {
+          invitations: invitations
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Error updating course invitations');
+    }
+  };
+
   const renderTabButtons = () => (
     <View style={styles.tabContainer}>
       <TouchableOpacity
@@ -1039,14 +1138,11 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
         {/* Tab Buttons */}
         {renderTabButtons()}
 
-        {/* Botón de invitar estudiantes - solo visible en pestaña de estudiantes */}
-        {activeTab === 'students' && (
+        {/* Botón de invitar estudiantes - solo visible para el profesor en pestaña de estudiantes */}
+        {isTeacher && activeTab === 'students' && (
           <TouchableOpacity 
             style={styles.inviteButton}
-            onPress={() => {
-              // TODO: Implementar funcionalidad de invitar estudiantes
-              console.log('Invitar estudiantes');
-            }}
+            onPress={handleOpenInviteModal}
           >
             <MaterialCommunityIcons name="account-plus" size={20} color="#FFFFFF" />
             <Text style={styles.inviteButtonText}>Invitar Estudiantes</Text>
@@ -1437,6 +1533,119 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
                 >
                   <Text style={styles.deleteButtonText}>Eliminar</Text>
                 </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Invite Students Modal */}
+      <Modal
+        visible={showInviteModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInviteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContainer}
+          >
+            <TouchableOpacity
+              style={styles.modalContent}
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Invitar al curso</Text>
+                <TouchableOpacity 
+                  style={styles.closeModalButton}
+                  onPress={() => setShowInviteModal(false)}
+                >
+                  <MaterialCommunityIcons name="close" size={24} color="#636E72" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                {/* Código de registro */}
+                <View style={styles.registrationCodeContainer}>
+                  <Text style={styles.registrationCodeLabel}>Código de registro</Text>
+                  <View style={styles.registrationCodeBox}>
+                    <Text style={styles.registrationCodeText}>
+                      {course?.registrationCode || 'No disponible'}
+                    </Text>
+                  </View>
+                  <Text style={styles.registrationCodeHint}>
+                    Los estudiantes pueden usar este código para unirse al curso
+                  </Text>
+                </View>
+
+                {/* Separador */}
+                <View style={styles.divider} />
+
+                {/* Invitación por correo */}
+                <View style={styles.emailInviteContainer}>
+                  <Text style={styles.emailInviteLabel}>O envía una invitación por correo</Text>
+                  <TextInput
+                    style={styles.emailInput}
+                    placeholder="Correo electrónico del estudiante"
+                    placeholderTextColor="#B2BEC3"
+                    value={studentEmail}
+                    onChangeText={(text) => {
+                      setStudentEmail(text);
+                      setInvitationError('');
+                      setInvitationSuccess(false);
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!invitationSuccess}
+                  />
+                  
+                  {/* Mensaje de éxito */}
+                  {invitationSuccess && (
+                    <View style={styles.successMessage}>
+                      <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
+                      <Text style={styles.successMessageText}>
+                        ¡Invitación enviada exitosamente! El estudiante recibirá una notificación.
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Mensaje de error */}
+                  {invitationError && (
+                    <View style={styles.errorMessage}>
+                      <MaterialCommunityIcons name="alert-circle" size={20} color="#DC2626" />
+                      <Text style={styles.errorMessageText}>
+                        {invitationError}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.modalFooter}>
+                {invitationSuccess ? (
+                  <TouchableOpacity
+                    style={styles.createButton}
+                    onPress={() => {
+                      setInvitationSuccess(false);
+                      setStudentEmail('');
+                      setInvitationError('');
+                    }}
+                  >
+                    <MaterialCommunityIcons name="email-plus" size={20} color="#FFFFFF" />
+                    <Text style={styles.createButtonText}>Enviar otra invitación</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.createButton, !studentEmail.trim() && styles.createButtonDisabled]}
+                    onPress={handleSendInvitation}
+                    disabled={!studentEmail.trim()}
+                  >
+                    <Text style={styles.createButtonText}>Enviar Invitación</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           </KeyboardAvoidingView>
@@ -2186,5 +2395,96 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Invite modal styles
+  registrationCodeContainer: {
+    marginBottom: 20,
+  },
+  registrationCodeLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 12,
+  },
+  registrationCodeBox: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
+    borderStyle: 'dashed',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  registrationCodeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#6C63FF',
+    letterSpacing: 2,
+  },
+  registrationCodeHint: {
+    fontSize: 13,
+    color: '#636E72',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 20,
+  },
+  emailInviteContainer: {
+    marginBottom: 8,
+  },
+  emailInviteLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 12,
+  },
+  emailInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: '#2D3436',
+  },
+  successMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#D1FAE5',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  successMessageText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#065F46',
+    lineHeight: 20,
+  },
+  errorMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  errorMessageText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#991B1B',
+    lineHeight: 20,
   },
 });

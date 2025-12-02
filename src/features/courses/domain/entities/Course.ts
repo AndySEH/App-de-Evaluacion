@@ -6,7 +6,7 @@ export interface Course {
   teacherId: string;
   registrationCode?: string;
   studentIds?: string[]; // JSON array
-  invitations?: any[]; // JSON array
+  invitations?: string[]; // Lista de emails invitados
   studentsCount?: number;
   activitiesCount?: number; // Campo para almacenar el conteo de actividades
 }

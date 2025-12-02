@@ -230,4 +230,98 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
     
     throw new Error(`Error adding course: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
+
+  async joinCourseByCode(studentId: string, registrationCode: string): Promise<Course> {
+    console.log('[API] POST Join Course by Code - Params:', { studentId, registrationCode, table: this.table });
+    
+    // Primero, buscar el curso por código de registro
+    const url = `${this.baseUrl}/read?tableName=${this.table}&registrationCode=${encodeURIComponent(registrationCode)}`;
+    const response = await this.authorizedFetch(url, { method: "GET" });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET Course by Code - Error:', response.status, errorBody);
+      if (response.status === 401) throw new Error("Unauthorized (token issue)");
+      throw new Error(`Error buscando curso: ${response.status}`);
+    }
+
+    const courses = await response.json() as Course[];
+    console.log('[API] GET Course by Code - Result:', courses);
+    
+    if (courses.length === 0) {
+      throw new Error("Código de registro inválido. Por favor verifica el código.");
+    }
+
+    const course = courses[0];
+    const courseId = course.id || course._id;
+
+    if (!courseId) {
+      throw new Error("Error: el curso no tiene ID");
+    }
+
+    // Verificar si el estudiante ya está registrado
+    let studentIdsArray: string[] = [];
+    if (Array.isArray(course.studentIds)) {
+      studentIdsArray = course.studentIds;
+    } else if (typeof course.studentIds === 'string') {
+      try {
+        studentIdsArray = JSON.parse(course.studentIds);
+      } catch (e) {
+        studentIdsArray = [];
+      }
+    }
+
+    if (studentIdsArray.includes(studentId)) {
+      throw new Error("Ya estás registrado en este curso");
+    }
+
+    // Agregar el estudiante al curso
+    const updatedStudentIds = [...studentIdsArray, studentId];
+    
+    const updateUrl = `${this.baseUrl}/update`;
+    const updateBody = JSON.stringify({
+      tableName: this.table,
+      idColumn: "id",
+      idValue: courseId,
+      updates: {
+        studentIds: updatedStudentIds
+      }
+    });
+
+    console.log('[API] PUT Join Course - Update Body:', updateBody);
+
+    const updateResponse = await this.authorizedFetch(updateUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: updateBody,
+    });
+
+    if (!updateResponse.ok) {
+      const errorBody = await updateResponse.json().catch(() => ({}));
+      console.error('[API] PUT Join Course - Error:', updateResponse.status, errorBody);
+      if (updateResponse.status === 401) throw new Error("Unauthorized");
+      throw new Error(`Error uniéndose al curso: ${updateResponse.status}`);
+    }
+
+    console.log('[API] PUT Join Course - Success');
+    return { ...course, studentIds: updatedStudentIds };
+  }
+
+  async getAllCourses(): Promise<Course[]> {
+    console.log('[API] GET All Courses - Table:', this.table);
+    const url = `${this.baseUrl}/read?tableName=${this.table}`;
+
+    const response = await this.authorizedFetch(url, { method: "GET" });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error('[API] GET All Courses - Error:', response.status, errorBody);
+      if (response.status === 401) throw new Error("Unauthorized (token issue)");
+      throw new Error(`Error fetching all courses: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('[API] GET All Courses - Result count:', data.length);
+    return data as Course[];
+  }
 }

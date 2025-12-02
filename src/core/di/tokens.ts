@@ -21,6 +21,7 @@ export const TOKENS = {
   GetCoursesByStudentUC: Symbol("GetCoursesByStudentUC"),
   GetCourseByIdUC: Symbol("GetCourseByIdUC"),
   AddCourseUC: Symbol("AddCourseUC"),
+  JoinCourseByCodeUC: Symbol("JoinCourseByCodeUC"),
 
   // Categories
   CategoryRemoteDS: Symbol("CategoryRemoteDS"),

@@ -10,10 +10,12 @@ const MAX_CONTENT_WIDTH = 600;
 
 export default function AddCourseScreen({ navigation }: { navigation: any }) {
   const { user } = useAuth();
-  const { addCourse } = useCourses();
+  const { addCourse, joinCourseByCode } = useCourses();
   
+  const [mode, setMode] = useState<'create' | 'join'>('create');
   const [courseName, setCourseName] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,14 +45,14 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
     setError('');
 
     try {
-      const registrationCode = generateRegistrationCode();
-      console.log('Código de registro generado:', registrationCode);
+      const registrationCodeValue = generateRegistrationCode();
+      console.log('Código de registro generado:', registrationCodeValue);
       
       await addCourse({
         name: courseName.trim(),
         description: courseDescription.trim() || undefined,
         teacherId: userId,
-        registrationCode: registrationCode.toString(),
+        registrationCode: registrationCodeValue.toString(),
         studentIds: [],
         invitations: [],
       }, userId);
@@ -62,6 +64,37 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
     } catch (err: any) {
       console.error('Error al crear curso:', err);
       setError(err.message || 'Error al crear el curso');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJoinCourse = async () => {
+    // Validaciones
+    if (!registrationCode.trim()) {
+      setError('El código de registro es obligatorio');
+      return;
+    }
+
+    const userId = getUserId();
+    if (!userId) {
+      setError('No se pudo obtener el ID del usuario');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log('Uniéndose al curso con código:', registrationCode);
+      await joinCourseByCode(userId, registrationCode.trim());
+      console.log('Unido al curso exitosamente');
+      
+      // Navegar de regreso
+      navigation.goBack();
+    } catch (err: any) {
+      console.error('Error al unirse al curso:', err);
+      setError(err.message || 'Error al unirse al curso');
     } finally {
       setIsLoading(false);
     }
@@ -83,8 +116,14 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
               <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Crear Curso</Text>
-              <Text style={styles.headerSubtitle}>Completa la información del nuevo curso</Text>
+              <Text style={styles.headerTitle}>
+                {mode === 'create' ? 'Crear Curso' : 'Unirse a Curso'}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {mode === 'create' 
+                  ? 'Completa la información del nuevo curso' 
+                  : 'Ingresa el código de registro para unirte'}
+              </Text>
             </View>
           </View>
         </View>
@@ -96,76 +135,161 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentWrapper}>
-          {/* Formulario */}
+          {/* Pestañas para alternar entre crear y unirse */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, mode === 'create' && styles.tabActive]}
+              onPress={() => {
+                setMode('create');
+                setError('');
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="plus-circle-outline" 
+                size={20} 
+                color={mode === 'create' ? '#5C6BC0' : '#6B6B6B'} 
+              />
+              <Text style={[styles.tabText, mode === 'create' && styles.tabTextActive]}>
+                Crear Curso
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, mode === 'join' && styles.tabActive]}
+              onPress={() => {
+                setMode('join');
+                setError('');
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="login" 
+                size={20} 
+                color={mode === 'join' ? '#5C6BC0' : '#6B6B6B'} 
+              />
+              <Text style={[styles.tabText, mode === 'join' && styles.tabTextActive]}>
+                Unirse a Curso
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Formulario según el modo */}
           <View style={styles.formCard}>
             <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="book-open-page-variant" size={48} color="#5C6BC0" />
-            </View>
-
-            {/* Campo de nombre */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>
-                Nombre del curso <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                value={courseName}
-                onChangeText={(text) => {
-                  setCourseName(text);
-                  setError('');
-                }}
-                placeholder="Ej: Programación Orientada a Objetos"
-                mode="flat"
-                style={styles.input}
-                underlineStyle={{ display: 'none' }}
-                contentStyle={styles.inputContent}
-                textColor="#000000"
-                placeholderTextColor="#999999"
-                disabled={isLoading}
-                maxLength={100}
+              <MaterialCommunityIcons 
+                name={mode === 'create' ? "book-open-page-variant" : "account-school"} 
+                size={48} 
+                color="#5C6BC0" 
               />
-              <Text style={styles.helperText}>
-                {courseName.length}/100 caracteres
-              </Text>
             </View>
 
-            {/* Campo de descripción */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Descripción</Text>
-              <TextInput
-                value={courseDescription}
-                onChangeText={setCourseDescription}
-                placeholder="Describe de qué trata el curso (opcional)"
-                mode="flat"
-                multiline
-                numberOfLines={4}
-                style={[styles.input, styles.textArea]}
-                underlineStyle={{ display: 'none' }}
-                contentStyle={styles.inputContent}
-                textColor="#000000"
-                placeholderTextColor="#999999"
-                disabled={isLoading}
-                maxLength={500}
-              />
-              <Text style={styles.helperText}>
-                {courseDescription.length}/500 caracteres
-              </Text>
-            </View>
+            {mode === 'create' ? (
+              <>
+                {/* Formulario para crear curso */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>
+                    Nombre del curso <Text style={styles.required}>*</Text>
+                  </Text>
+                  <TextInput
+                    value={courseName}
+                    onChangeText={(text) => {
+                      setCourseName(text);
+                      setError('');
+                    }}
+                    placeholder="Ej: Programación Orientada a Objetos"
+                    mode="flat"
+                    style={styles.input}
+                    underlineStyle={{ display: 'none' }}
+                    contentStyle={styles.inputContent}
+                    textColor="#000000"
+                    placeholderTextColor="#999999"
+                    disabled={isLoading}
+                    maxLength={100}
+                  />
+                  <Text style={styles.helperText}>
+                    {courseName.length}/100 caracteres
+                  </Text>
+                </View>
 
-            {/* Mensaje de error */}
-            {error ? (
-              <View style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle" size={20} color="#DC2626" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Descripción</Text>
+                  <TextInput
+                    value={courseDescription}
+                    onChangeText={setCourseDescription}
+                    placeholder="Describe de qué trata el curso (opcional)"
+                    mode="flat"
+                    multiline
+                    numberOfLines={4}
+                    style={[styles.input, styles.textArea]}
+                    underlineStyle={{ display: 'none' }}
+                    contentStyle={styles.inputContent}
+                    textColor="#000000"
+                    placeholderTextColor="#999999"
+                    disabled={isLoading}
+                    maxLength={500}
+                  />
+                  <Text style={styles.helperText}>
+                    {courseDescription.length}/500 caracteres
+                  </Text>
+                </View>
 
-            {/* Información adicional */}
-            <View style={styles.infoBox}>
-              <MaterialCommunityIcons name="information-outline" size={20} color="#5C6BC0" />
-              <Text style={styles.infoText}>
-                Después de crear el curso, podrás agregar estudiantes y crear actividades.
-              </Text>
-            </View>
+                {error ? (
+                  <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={20} color="#DC2626" />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.infoBox}>
+                  <MaterialCommunityIcons name="information-outline" size={20} color="#5C6BC0" />
+                  <Text style={styles.infoText}>
+                    Después de crear el curso, podrás agregar estudiantes y crear actividades.
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Formulario para unirse a curso */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>
+                    Código de registro <Text style={styles.required}>*</Text>
+                  </Text>
+                  <TextInput
+                    value={registrationCode}
+                    onChangeText={(text) => {
+                      setRegistrationCode(text);
+                      setError('');
+                    }}
+                    placeholder="Ej: 123456"
+                    mode="flat"
+                    style={styles.input}
+                    underlineStyle={{ display: 'none' }}
+                    contentStyle={styles.inputContent}
+                    textColor="#000000"
+                    placeholderTextColor="#999999"
+                    disabled={isLoading}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                  <Text style={styles.helperText}>
+                    Ingresa el código de 6 dígitos proporcionado por tu profesor
+                  </Text>
+                </View>
+
+                {error ? (
+                  <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={20} color="#DC2626" />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.infoBox}>
+                  <MaterialCommunityIcons name="information-outline" size={20} color="#5C6BC0" />
+                  <Text style={styles.infoText}>
+                    Pregunta a tu profesor por el código de registro del curso para poder unirte.
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Botones */}
@@ -180,16 +304,18 @@ export default function AddCourseScreen({ navigation }: { navigation: any }) {
 
             <TouchableOpacity
               style={[styles.createButton, isLoading && styles.createButtonDisabled]}
-              onPress={handleCreateCourse}
+              onPress={mode === 'create' ? handleCreateCourse : handleJoinCourse}
               disabled={isLoading}
             >
               <MaterialCommunityIcons 
-                name={isLoading ? "loading" : "plus-circle"} 
+                name={isLoading ? "loading" : mode === 'create' ? "plus-circle" : "login"} 
                 size={20} 
                 color="#FFFFFF" 
               />
               <Text style={styles.createButtonText}>
-                {isLoading ? 'Creando...' : 'Crear Curso'}
+                {isLoading 
+                  ? (mode === 'create' ? 'Creando...' : 'Uniéndose...') 
+                  : (mode === 'create' ? 'Crear Curso' : 'Unirse')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -254,6 +380,35 @@ const styles = StyleSheet.create({
     maxWidth: MAX_CONTENT_WIDTH,
     paddingHorizontal: 20,
     paddingTop: 24,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    elevation: 1,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  tabActive: {
+    backgroundColor: '#E8EAF6',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B6B6B',
+  },
+  tabTextActive: {
+    color: '#5C6BC0',
   },
   formCard: {
     backgroundColor: '#FFFFFF',
