@@ -16,7 +16,7 @@ import { useCourses } from "@/src/features/courses/presentation/context/courseCo
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
