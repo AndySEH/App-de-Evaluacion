@@ -186,10 +186,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </View>
           ) : (
             courses.map((course, index) => (
-              <Card key={course._id || index} style={styles.courseCard} mode="elevated">
+              <Card key={course.id || course._id || index} style={styles.courseCard} mode="elevated">
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => navigation.navigate('CourseDetail', { id: course._id })}
+                  onPress={() => navigation.navigate('CourseDetail', { courseId: course.id || course._id })}
                 >
                   <Card.Content style={styles.courseContent}>
                     <View style={styles.courseRow}>

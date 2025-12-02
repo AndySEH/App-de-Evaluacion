@@ -11,6 +11,8 @@ export const TOKENS = {
   UserRemoteDS: Symbol("UserRemoteDS"),
   UserRepo: Symbol("UserRepo"),
   UpdateUserUC: Symbol("UpdateUserUC"),
+  GetUserByIdUC: Symbol("GetUserByIdUC"),
+  GetUsersByIdsUC: Symbol("GetUsersByIdsUC"),
 
   // Courses
   CourseRemoteDS: Symbol("CourseRemoteDS"),

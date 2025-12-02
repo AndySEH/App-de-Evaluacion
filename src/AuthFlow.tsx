@@ -6,6 +6,7 @@ import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
 import AddCourseScreen from "./features/courses/presentation/screens/AddCourseScreen";
+import CourseDetailScreen from "./features/courses/presentation/screens/CourseDetailScreen";
 import TeacherCoursesScreen from "./features/courses/presentation/screens/TeacherCoursesScreen";
 import HomeScreen from "./features/home/presentation/screens/HomeScreen";
 import NotificationsScreen from "./features/notifications/NotificationsScreen";
@@ -99,6 +100,14 @@ export default function AuthFlow() {
             component={AddCourseScreen}
             options={{
               title: "Crear Curso",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="CourseDetail"
+            component={CourseDetailScreen}
+            options={{
+              title: "Detalles del Curso",
               headerShown: false,
             }}
           />

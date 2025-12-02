@@ -13,6 +13,8 @@ import { SignupUseCase } from "@/src/features/auth/domain/usecases/SignupUseCase
 // User
 import { UserRemoteDataSourceImpl } from "@/src/features/auth/data/datasources/UserRemoteDataSourceImp";
 import { UserRepositoryImpl } from "@/src/features/auth/data/repositories/UserRepositoryImpl";
+import { GetUserByIdUseCase } from "@/src/features/auth/domain/usecases/GetUserByIdUseCase";
+import { GetUsersByIdsUseCase } from "@/src/features/auth/domain/usecases/GetUsersByIdsUseCase";
 import { UpdateUserUseCase } from "@/src/features/auth/domain/usecases/UpdateUserUseCase";
 
 // Courses
@@ -93,7 +95,9 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
         const userRepo = new UserRepositoryImpl(userDS);
         c.register(TOKENS.UserRemoteDS, userDS)
             .register(TOKENS.UserRepo, userRepo)
-            .register(TOKENS.UpdateUserUC, new UpdateUserUseCase(userRepo));
+            .register(TOKENS.UpdateUserUC, new UpdateUserUseCase(userRepo))
+            .register(TOKENS.GetUserByIdUC, new GetUserByIdUseCase(userRepo))
+            .register(TOKENS.GetUsersByIdsUC, new GetUsersByIdsUseCase(userRepo));
 
         // Courses
         const courseRemoteDS = new CourseRemoteDataSourceImp(authDS);

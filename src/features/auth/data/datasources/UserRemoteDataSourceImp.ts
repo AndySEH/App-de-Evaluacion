@@ -84,4 +84,59 @@ export class UserRemoteDataSourceImpl implements UserDataSource {
       throw new Error(`Error updating user: ${response.status}`);
     }
   }
+
+  async getUserById(userId: string): Promise<AuthUser | null> {
+    console.log('[API] GET User by ID - Params:', { userId, table: this.table });
+    
+    const projectId = process.env.EXPO_PUBLIC_ROBLE_PROJECT_ID;
+    if (!projectId) throw new Error("Missing EXPO_PUBLIC_ROBLE_PROJECT_ID env var");
+    
+    const url = `${this.baseUrl}/${projectId}/read?tableName=${this.table}&userId=${userId}`;
+    
+    const response = await this.authorizedFetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.status === 200) {
+      const data = await response.json();
+      console.log('[API] GET User by ID - Result:', data);
+      
+      if (data && data.length > 0) {
+        return data[0] as AuthUser;
+      }
+      return null;
+    } else {
+      console.error('[API] GET User by ID - Error:', response.status);
+      return null;
+    }
+  }
+
+  async getUsersByIds(userIds: string[]): Promise<AuthUser[]> {
+    console.log('[API] GET Users by IDs - Params:', { userIds, table: this.table });
+    
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const projectId = process.env.EXPO_PUBLIC_ROBLE_PROJECT_ID;
+    if (!projectId) throw new Error("Missing EXPO_PUBLIC_ROBLE_PROJECT_ID env var");
+
+    // Obtener todos los usuarios haciendo múltiples peticiones
+    const users: AuthUser[] = [];
+    
+    for (const userId of userIds) {
+      try {
+        const user = await this.getUserById(userId);
+        if (user) {
+          users.push(user);
+        }
+      } catch (error) {
+        console.error(`[API] Error fetching user ${userId}:`, error);
+      }
+    }
+
+    console.log('[API] GET Users by IDs - Result:', users.length, 'users found');
+    return users;
+  }
 }
