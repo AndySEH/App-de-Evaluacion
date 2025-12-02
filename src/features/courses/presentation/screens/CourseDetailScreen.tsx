@@ -105,6 +105,8 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       // Verificar si el usuario es docente
       const userIsTeacher = courseData?.teacherId === (user?._id || user?.id);
       setIsTeacher(userIsTeacher);
+      console.log('[ActivityDetailScreen] User is teacher:', userIsTeacher);
+      console.log('teacherId:', courseData?.teacherId, 'userId:', user?.id);
 
       // Obtener estudiantes si existen IDs
       if (courseData?.studentIds && courseData.studentIds.length > 0) {

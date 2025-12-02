@@ -66,6 +66,8 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
       setCourse(courseData);
       const userIsTeacher = courseData?.teacherId === (user?._id || user?.id);
       setIsTeacher(userIsTeacher);
+      console.log('[ActivityDetailScreen] User is teacher:', userIsTeacher);
+      console.log('teacherId:', courseData?.teacherId, 'userId:', user?.id);
       
       // Obtener categoría
       const categories = await getCategoriesByCourseUC.execute(courseId);
