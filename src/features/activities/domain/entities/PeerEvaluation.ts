@@ -4,10 +4,10 @@ export interface PeerEvaluation {
   assessmentId: string;
   evaluatorId: string;
   evaluateeId: string;
-  punctuality: number;
-  contributions: number;
-  commitment: number;
-  attitude: number;
+  punctuality: number; // Integer 1-5
+  contributions: number; // Integer 1-5
+  commitment: number; // Integer 1-5
+  attitude: number; // Integer 1-5
 }
 
 export type NewPeerEvaluation = Omit<PeerEvaluation, "_id">;

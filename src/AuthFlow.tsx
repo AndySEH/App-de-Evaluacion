@@ -1,6 +1,10 @@
 import { createStackNavigator } from "@react-navigation/stack";
 
 import ActivityDetailScreen from "./features/activities/presentation/screens/ActivityDetailScreen";
+import AssessmentGradesScreen from "./features/activities/presentation/screens/AssessmentGradesScreen";
+import PeerEvaluationFormScreen from "./features/activities/presentation/screens/PeerEvaluationFormScreen";
+import StudentGradesScreen from "./features/activities/presentation/screens/StudentGradesScreen";
+import TeacherGradesTableScreen from "./features/activities/presentation/screens/TeacherGradesTableScreen";
 import { useAuth } from "./features/auth/presentation/context/authContext";
 import LoginScreen from "./features/auth/presentation/screens/LoginScreen";
 import SignupScreen from "./features/auth/presentation/screens/SignupScreen";
@@ -79,6 +83,38 @@ export default function AuthFlow() {
             component={ActivityDetailScreen}
             options={{
               title: "Detalles de la Actividad",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="PeerEvaluationForm"
+            component={PeerEvaluationFormScreen}
+            options={{
+              title: "Evaluar Compañeros",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="AssessmentGrades"
+            component={AssessmentGradesScreen}
+            options={{
+              title: "Calificaciones",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="StudentGrades"
+            component={StudentGradesScreen}
+            options={{
+              title: "Mis Calificaciones",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="TeacherGradesTable"
+            component={TeacherGradesTableScreen}
+            options={{
+              title: "Tabla de Calificaciones",
               headerShown: false,
             }}
           />

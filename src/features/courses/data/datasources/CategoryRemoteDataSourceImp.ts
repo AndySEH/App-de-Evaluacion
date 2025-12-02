@@ -99,16 +99,10 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
 
   async addCategory(category: NewCategory): Promise<void> {
     console.log('[API] POST Add Category - Params:', { category, table: this.table });
-    
-    // Mapear randomGroups a random para la API
-    const apiCategory: any = { ...category };
-    if ('randomGroups' in category) {
-      apiCategory.random = category.randomGroups;
-      delete apiCategory.randomGroups;
-    }
+    console.log('[API] POST Add Category - Category data:', JSON.stringify(category, null, 2));
     
     const url = `${this.baseUrl}/insert`;
-    const body = JSON.stringify({ tableName: this.table, records: [apiCategory] });
+    const body = JSON.stringify({ tableName: this.table, records: [category] });
     console.log('[API] POST Add Category - Request URL:', url);
     console.log('[API] POST Add Category - Request Body:', body);
 
@@ -136,6 +130,8 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
 
   async updateCategory(id: string, updates: Partial<Category>): Promise<void> {
     console.log('[API] PUT Update Category - Params:', { id, updates, table: this.table });
+    console.log('[API] PUT Update Category - Updates data:', JSON.stringify(updates, null, 2));
+    
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
@@ -143,12 +139,17 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       idValue: id,
       updates,
     });
+    console.log('[API] PUT Update Category - Request Body:', body);
 
     const response = await this.authorizedFetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body,
     });
+
+    console.log('[API] PUT Update Category - Response Status:', response.status);
+    const responseData = await response.json().catch(() => ({}));
+    console.log('[API] PUT Update Category - Response Data:', responseData);
 
     if (response.status === 200) {
       console.log('[API] PUT Update Category - Result: Success');
@@ -158,9 +159,8 @@ export class CategoryRemoteDataSourceImp implements CategoryDataSource {
       console.error('[API] PUT Update Category - Error:', response.status, 'Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
-    console.error('[API] PUT Update Category - Error:', response.status, errorBody);
-    throw new Error(`Error updating category: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
+    console.error('[API] PUT Update Category - Error:', response.status, responseData);
+    throw new Error(`Error updating category: ${response.status} - ${responseData.message ?? "Unknown error"}`);
   }
 
   async deleteCategory(id: string): Promise<void> {

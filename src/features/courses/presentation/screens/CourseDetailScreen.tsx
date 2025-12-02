@@ -45,6 +45,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const updateGroupUC = di.resolve<UpdateGroupUseCase>(TOKENS.UpdateGroupUC);
   const deleteGroupUC = di.resolve<any>(TOKENS.DeleteGroupUC);
   const getAssessmentsByActivityUC = di.resolve<any>(TOKENS.GetAssessmentsByActivityUC);
+  const addAssessmentUC = di.resolve<any>(TOKENS.AddAssessmentUC);
   const addActivityUC = di.resolve<any>(TOKENS.AddActivityUC);
   const updateActivityUC = di.resolve<any>(TOKENS.UpdateActivityUC);
   const deleteActivityUC = di.resolve<any>(TOKENS.DeleteActivityUC);
@@ -52,9 +53,11 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const [course, setCourse] = useState<any>(null);
   const [students, setStudents] = useState<AuthUser[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesKey, setCategoriesKey] = useState(0); // Force re-render key
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('categories');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [categoryGroupCounts, setCategoryGroupCounts] = useState<Record<string, number>>({});
   
@@ -80,6 +83,11 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   const [activityCategory, setActivityCategory] = useState('');
   const [activityDueDate, setActivityDueDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // Assessment-on-create state
+  const [sendAssessmentOnCreate, setSendAssessmentOnCreate] = useState(false);
+  const [assessmentTitleOnCreate, setAssessmentTitleOnCreate] = useState('');
+  const [assessmentDurationOnCreate, setAssessmentDurationOnCreate] = useState('60');
+  const [assessmentGradesVisibleOnCreate, setAssessmentGradesVisibleOnCreate] = useState(false);
   
   // Modal state for delete activity confirmation
   const [showDeleteActivityModal, setShowDeleteActivityModal] = useState(false);
@@ -178,7 +186,16 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   };
 
   const handleCreateCategory = async () => {
+    console.log('[CourseDetailScreen] ===== START handleCreateCategory =====');
+    console.log('[CourseDetailScreen] categoryName:', categoryName);
+    console.log('[CourseDetailScreen] categoryName.trim():', categoryName.trim());
+    console.log('[CourseDetailScreen] maxStudents:', maxStudents);
+    console.log('[CourseDetailScreen] isRandomGroups:', isRandomGroups);
+    console.log('[CourseDetailScreen] courseId:', courseId);
+    
     try {
+      console.log('[CourseDetailScreen] handleCreateCategory called - isEditMode:', isEditMode);
+      
       if (isEditMode && editingCategoryId && editingCategory) {
         // Modo edición
         console.log('[CourseDetailScreen] Updating category:', editingCategoryId);
@@ -201,11 +218,9 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
         }
       } else {
         // Modo creación
-        const categoryId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          const r = Math.random() * 16 | 0;
-          const v = c === 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 15);
+        const categoryId = `cat_${timestamp}_${random}`;
         
         console.log('[CourseDetailScreen] Creating category:', {
           id: categoryId,
@@ -223,25 +238,40 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           ...(maxStudents && { maxStudentsPerGroup: parseInt(maxStudents) })
         };
 
+        console.log('[CourseDetailScreen] About to call addCategoryUC.execute...');
         await addCategoryUC.execute(newCategory);
-        console.log('[CourseDetailScreen] Category created successfully');
+        console.log('[CourseDetailScreen] Category created successfully in database');
 
         // Si es categoría aleatoria, crear grupos automáticamente con estudiantes
         if (isRandomGroups && students.length > 0) {
           console.log('[CourseDetailScreen] Creating random groups for new category...');
           await createRandomGroupsForCategory(categoryId, newCategory, students);
+          console.log('[CourseDetailScreen] Random groups creation completed');
         }
         // Si es categoría libre, crear grupos vacíos
         else if (!isRandomGroups && students.length > 0) {
           console.log('[CourseDetailScreen] Creating empty groups for free category...');
           await createEmptyGroupsForCategory(categoryId, newCategory, students.length);
+          console.log('[CourseDetailScreen] Empty groups creation completed');
+        } else {
+          console.log('[CourseDetailScreen] No groups to create - students.length:', students.length);
         }
       }
 
       // Recargar categorías
+      console.log('[CourseDetailScreen] About to reload categories for courseId:', courseId);
       const categoriesData = await getCategoriesByCourseUC.execute(courseId);
-      console.log('[CourseDetailScreen] Categories reloaded:', categoriesData.length);
-      setCategories(categoriesData);
+      console.log('[CourseDetailScreen] ===== CATEGORIES FETCH COMPLETE =====');
+      console.log('[CourseDetailScreen] Categories reloaded:', categoriesData.length, categoriesData);
+      console.log('[CourseDetailScreen] Categories data type:', typeof categoriesData, Array.isArray(categoriesData));
+      console.log('[CourseDetailScreen] First category:', categoriesData[0]);
+      
+      // Forzar actualización del estado con un nuevo array Y cambiar el key
+      console.log('[CourseDetailScreen] About to setCategories...');
+      setCategories([...categoriesData]);
+      console.log('[CourseDetailScreen] setCategories complete');
+      setCategoriesKey(prev => prev + 1); // Force re-render
+      console.log('[CourseDetailScreen] setCategoriesKey complete, new key:', categoriesKey + 1);
 
       // Recargar conteos de grupos
       const groupCounts: Record<string, number> = {};
@@ -256,7 +286,8 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           }
         }
       }
-      setCategoryGroupCounts(groupCounts);
+      console.log('[CourseDetailScreen] Group counts:', groupCounts);
+      setCategoryGroupCounts({...groupCounts});
 
       // Cerrar modal y limpiar campos
       setShowCategoryModal(false);
@@ -558,11 +589,15 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   };
 
   const handleCreateActivity = async () => {
+    if (isSubmitting) return; // Prevent double-click
+    
     try {
       if (!activityName.trim() || !activityCategory) {
         console.error('[CourseDetailScreen] Activity name and category are required');
         return;
       }
+
+      setIsSubmitting(true);
 
       if (isEditActivityMode && editingActivityId) {
         // Modo edición
@@ -605,11 +640,89 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
 
         await addActivityUC.execute(newActivity);
         console.log('[CourseDetailScreen] Activity created successfully');
+
+        // Si se seleccionó enviar evaluación al crear, crearla inmediatamente
+        if (sendAssessmentOnCreate) {
+          try {
+            const assessmentId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+              const r = Math.random() * 16 | 0;
+              const v = c === 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+            });
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const startAt = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+            const durationMinutes = parseInt(assessmentDurationOnCreate || '60', 10);
+
+            // Calcular endAt sumando durationMinutes a startAt
+            const startDate = new Date(`${startAt}:00`);
+            const endDate = new Date(startDate.getTime() + (durationMinutes * 60 * 1000));
+            const endYear = endDate.getFullYear();
+            const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+            const endDay = String(endDate.getDate()).padStart(2, '0');
+            const endHours = String(endDate.getHours()).padStart(2, '0');
+            const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+            const endAt = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
+
+            const newAssessment = {
+              id: assessmentId,
+              activityId,
+              courseId,
+              title: (assessmentTitleOnCreate && assessmentTitleOnCreate.trim()) || 'Evaluación',
+              durationMinutes,
+              startAt,
+              endAt,
+              gradesVisible: assessmentGradesVisibleOnCreate,
+              cancelled: false,
+            };
+
+            console.log('[CourseDetailScreen] Creating assessment on activity create:', newAssessment);
+            await addAssessmentUC.execute(newAssessment);
+          } catch (e) {
+            console.error('[CourseDetailScreen] Error creating assessment on create:', e);
+          }
+        }
       }
 
-      // Recargar actividades
+      // Recargar actividades y estado de evaluaciones activas
       const activitiesData = await getActivitiesByCourseUC.execute(courseId);
       setActivities(activitiesData);
+      try {
+        const assessments: Record<string, boolean> = {};
+        const now = new Date();
+        for (const act of activitiesData) {
+          const actId = act.id || act._id || '';
+          if (!actId) continue;
+          try {
+            const actAssessments = await getAssessmentsByActivityUC.execute(actId);
+            const hasActiveAssessment = actAssessments.some((assessment: any) => {
+              if (assessment.cancelled) return false;
+              if (!assessment.startAt || !assessment.endAt) {
+                // Calcular endAt usando duration si no viene calculado del backend
+                if (!assessment.startAt || !assessment.durationMinutes) return false;
+                const start = new Date(assessment.startAt);
+                const end = new Date(start.getTime() + assessment.durationMinutes * 60 * 1000);
+                return now >= start && now <= end;
+              }
+              const start = new Date(assessment.startAt);
+              const end = new Date(assessment.endAt);
+              return now >= start && now <= end;
+            });
+            assessments[actId] = hasActiveAssessment;
+          } catch (err) {
+            assessments[actId] = false;
+          }
+        }
+        setActivityAssessments(assessments);
+      } catch (err) {
+        console.error('[CourseDetailScreen] Error recomputing assessments after create:', err);
+      }
 
       // Cerrar modal y limpiar campos
       setShowActivityModal(false);
@@ -619,8 +732,14 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
       setActivityDescription('');
       setActivityCategory('');
       setActivityDueDate('');
+      setSendAssessmentOnCreate(false);
+      setAssessmentTitleOnCreate('');
+      setAssessmentDurationOnCreate('60');
+      setAssessmentGradesVisibleOnCreate(false);
     } catch (error) {
       console.error('[CourseDetailScreen] Error creating/updating activity:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -755,7 +874,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
   );
 
   const renderCategories = () => (
-    <>
+    <View key={categoriesKey}>
       {categories.length === 0 ? (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="shape-outline" size={64} color="#CCCCCC" />
@@ -823,7 +942,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           </View>
         )})
       )}
-    </>
+    </View>
   );
 
   const renderActivities = () => {
@@ -1101,11 +1220,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalBackground}>
-            <TouchableOpacity 
-              style={styles.modalContent}
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-            >
+            <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{isEditMode ? 'Editar Categoría' : 'Nueva Categoría'}</Text>
                 <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
@@ -1121,7 +1236,10 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
                     style={styles.input}
                     placeholder="Ej: Proyecto Final"
                     value={categoryName}
-                    onChangeText={setCategoryName}
+                    onChangeText={(text) => {
+                      console.log('[INPUT] Category name changed to:', text, 'trimmed:', text.trim(), 'length:', text.trim().length);
+                      setCategoryName(text);
+                    }}
                     placeholderTextColor="#999999"
                   />
                 </View>
@@ -1166,13 +1284,20 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
               <View style={styles.modalFooter}>
                 <TouchableOpacity
                   style={[styles.createButton, !categoryName.trim() && styles.createButtonDisabled]}
-                  onPress={handleCreateCategory}
-                  disabled={!categoryName.trim()}
+                  onPress={() => {
+                    console.log('[BUTTON] Button pressed - categoryName:', categoryName, 'trimmed:', categoryName.trim(), 'disabled?:', !categoryName.trim());
+                    if (categoryName.trim()) {
+                      console.log('[BUTTON] Calling handleCreateCategory...');
+                      handleCreateCategory();
+                    } else {
+                      console.log('[BUTTON] Button is disabled, categoryName is empty');
+                    }
+                  }}
                 >
                   <Text style={styles.createButtonText}>{isEditMode ? 'Editar' : 'Crear'}</Text>
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1379,9 +1504,9 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
 
               <View style={styles.modalFooter}>
                 <TouchableOpacity
-                  style={[styles.createButton, (!activityName.trim() || !activityCategory) && styles.createButtonDisabled]}
+                  style={[styles.createButton, (isSubmitting || !activityName.trim() || !activityCategory) && styles.createButtonDisabled]}
                   onPress={handleCreateActivity}
-                  disabled={!activityName.trim() || !activityCategory}
+                  disabled={isSubmitting || !activityName.trim() || !activityCategory}
                 >
                   <Text style={styles.createButtonText}>{isEditActivityMode ? 'Editar' : 'Crear'}</Text>
                 </TouchableOpacity>
@@ -2151,6 +2276,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Generic switch row
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   // Delete modal styles
   modalContainer: {
