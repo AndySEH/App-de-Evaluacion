@@ -1,28 +1,28 @@
 import { useDI } from "@/src/core/di/DIProvider";
 import { TOKENS } from "@/src/core/di/tokens";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
+import { Category } from "@/src/features/courses/domain/entities/Category";
+import { GetCategoryByIdUseCase } from "@/src/features/courses/domain/usecases/GetCategoryByIdUseCase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { Text } from "react-native-paper";
 import { Activity } from "../../domain/entities/Activity";
 import { Assessment } from "../../domain/entities/Assessment";
-import { GetActivityByIdUseCase } from "../../domain/usecases/GetActivityByIdUseCase";
-import { UpdateActivityUseCase } from "../../domain/usecases/UpdateActivityUseCase";
-import { GetAssessmentsByActivityUseCase } from "../../domain/usecases/GetAssessmentsByActivityUseCase";
-import { UpdateAssessmentUseCase } from "../../domain/usecases/UpdateAssessmentUseCase";
 import { DeleteAssessmentUseCase } from "../../domain/usecases/DeleteAssessmentUseCase";
-import { Category } from "@/src/features/courses/domain/entities/Category";
-import { GetCategoryByIdUseCase } from "@/src/features/courses/domain/usecases/GetCategoryByIdUseCase";
+import { GetActivityByIdUseCase } from "../../domain/usecases/GetActivityByIdUseCase";
+import { GetAssessmentsByActivityUseCase } from "../../domain/usecases/GetAssessmentsByActivityUseCase";
+import { UpdateActivityUseCase } from "../../domain/usecases/UpdateActivityUseCase";
+import { UpdateAssessmentUseCase } from "../../domain/usecases/UpdateAssessmentUseCase";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;

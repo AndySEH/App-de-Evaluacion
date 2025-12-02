@@ -16,8 +16,8 @@ import { UpdateCategoryUseCase } from "@/src/features/courses/domain/usecases/Up
 import { UpdateGroupUseCase } from "@/src/features/courses/domain/usecases/UpdateGroupUseCase";
 import { useCourses } from "@/src/features/courses/presentation/context/courseContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
 import { Picker } from "@react-native-picker/picker";
+import { FontAwesome6 } from "@react-native-vector-icons/fontawesome6";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
