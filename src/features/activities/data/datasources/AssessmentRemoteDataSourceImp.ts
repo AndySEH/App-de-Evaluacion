@@ -62,9 +62,11 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
 
   async getAssessmentsByActivity(activityId: string): Promise<Assessment[]> {
     console.log('[API] GET Assessments by Activity - Params:', { activityId, table: this.table });
+    console.log('[API] Full URL:', `${this.baseUrl}/read?tableName=${this.table}&activityId=${encodeURIComponent(activityId)}`);
     const url = `${this.baseUrl}/read?tableName=${this.table}&activityId=${encodeURIComponent(activityId)}`;
     const response = await this.authorizedFetch(url, { method: "GET" });
 
+    console.log('[API] Response status:', response.status);
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       console.error('[API] GET Assessments by Activity - Error:', response.status, errorBody);
@@ -73,7 +75,8 @@ export class AssessmentRemoteDataSourceImp implements AssessmentDataSource {
     }
 
     const data = await response.json();
-    console.log('[API] GET Assessments by Activity - Result:', data);
+    console.log('[API] GET Assessments by Activity - Result count:', data.length);
+    console.log('[API] GET Assessments by Activity - Full Result:', JSON.stringify(data, null, 2));
     return data as Assessment[];
   }
 
