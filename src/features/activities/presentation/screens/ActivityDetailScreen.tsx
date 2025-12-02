@@ -26,10 +26,11 @@ import { AddAssessmentUseCase } from "../../domain/usecases/AddAssessmentUseCase
 import { DeleteAssessmentUseCase } from "../../domain/usecases/DeleteAssessmentUseCase";
 import { GetActivityByIdUseCase } from "../../domain/usecases/GetActivityByIdUseCase";
 import { GetAssessmentsByActivityUseCase } from "../../domain/usecases/GetAssessmentsByActivityUseCase";
+import { GetPeerEvaluationsByAssessmentUseCase } from "../../domain/usecases/GetPeerEvaluationsByAssessmentUseCase";
 import { UpdateActivityUseCase } from "../../domain/usecases/UpdateActivityUseCase";
 import { UpdateAssessmentUseCase } from "../../domain/usecases/UpdateAssessmentUseCase";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CONTENT_WIDTH = 600;
 
 export default function ActivityDetailScreen({ route, navigation }: { route: any; navigation: any }) {
@@ -45,10 +46,12 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
   const addAssessmentUC = di.resolve<AddAssessmentUseCase>(TOKENS.AddAssessmentUC);
   const getCategoryByIdUC = di.resolve<GetCategoryByIdUseCase>(TOKENS.GetCategoryByIdUC);
   const getCourseByIdUC = di.resolve<GetCourseByIdUseCase>(TOKENS.GetCourseByIdUC);
+  const getPeerEvaluationsByAssessmentUC = di.resolve<GetPeerEvaluationsByAssessmentUseCase>(TOKENS.GetPeerEvaluationsByAssessmentUC);
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [userEvaluations, setUserEvaluations] = useState<Map<string, boolean>>(new Map());
   const [showAssessments, setShowAssessments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isTeacher, setIsTeacher] = useState<boolean | null>(null);
@@ -57,7 +60,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
   const [showCreateAssessmentModal, setShowCreateAssessmentModal] = useState(false);
   const [assessmentTitle, setAssessmentTitle] = useState('');
   const [assessmentDuration, setAssessmentDuration] = useState('');
-  const [sendImmediately, setSendImmediately] = useState(true);
+  const [assessmentGradesVisible, setAssessmentGradesVisible] = useState(false);
 
   // Modal state for editing assessment
   const [showEditAssessmentModal, setShowEditAssessmentModal] = useState(false);
@@ -87,6 +90,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       setIsTeacher(userIsTeacher);
       console.log('[ActivityDetailScreen] User is teacher:', userIsTeacher);
       console.log('[ActivityDetailScreen] teacherId:', teacherId, 'userId:', userId);
+      console.log('[ActivityDetailScreen] Will show button?', (assessments.length > 0 || userIsTeacher));
       // Cargar actividad
       const activityData = await getActivityByIdUC.execute(activityId);
       if (!activityData) {
@@ -102,18 +106,41 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       }
 
       // Cargar evaluaciones
-      console.log('[ActivityDetailScreen] ===== LOADING ASSESSMENTS =====');
-      console.log('[ActivityDetailScreen] Activity ID for query:', activityId);
       const assessmentsData = await getAssessmentsByActivityUC.execute(activityId);
-      console.log('[ActivityDetailScreen] Assessments loaded:', assessmentsData.length);
-      console.log('[ActivityDetailScreen] Assessments data:', JSON.stringify(assessmentsData, null, 2));
       setAssessments(assessmentsData);
-      // Si ya hay evaluaciones, mostrar el panel por defecto
-      if (assessmentsData && assessmentsData.length > 0) {
-        console.log('[ActivityDetailScreen] Auto-opening assessments panel');
-        setShowAssessments(true);
-      } else {
-        console.log('[ActivityDetailScreen] No assessments found, panel closed');
+
+      // Si no es profesor, verificar qué evaluaciones ya hizo el usuario
+      if (!userIsTeacher) {
+        const currentUserId = user?._id || user?.id || user?.UserId || '';
+        console.log('[ActivityDetailScreen] Checking evaluations for user ID:', currentUserId);
+        console.log('[ActivityDetailScreen] User object:', JSON.stringify(user, null, 2));
+        const evaluationsMap = new Map<string, boolean>();
+        
+        for (const assessment of assessmentsData) {
+          const assessmentId = assessment.id || assessment._id || '';
+          const evaluations = await getPeerEvaluationsByAssessmentUC.execute(assessmentId);
+          console.log(`[ActivityDetailScreen] Evaluations for assessment ${assessmentId}:`, JSON.stringify(evaluations, null, 2));
+          
+          // Log cada evaluación para ver los evaluatorId
+          evaluations.forEach((ev, idx) => {
+            console.log(`[ActivityDetailScreen] Evaluation ${idx}:`, {
+              evaluatorId: ev.evaluatorId,
+              evaluateeId: ev.evaluateeId,
+              _id: ev._id,
+              id: ev.id
+            });
+          });
+          
+          const hasEvaluated = evaluations.some(ev => {
+            const match = ev.evaluatorId === currentUserId;
+            console.log(`[ActivityDetailScreen] Comparing evaluatorId '${ev.evaluatorId}' === currentUserId '${currentUserId}': ${match}`);
+            return match;
+          });
+          console.log(`[ActivityDetailScreen] Assessment ${assessmentId} - hasEvaluated: ${hasEvaluated}`);
+          evaluationsMap.set(assessmentId, hasEvaluated);
+        }
+        
+        setUserEvaluations(evaluationsMap);
       }
 
     } catch (error) {
@@ -249,16 +276,6 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const startAt = `${year}-${month}-${day}T${hours}:${minutes}`;
 
-      // Calcular endAt sumando durationMinutes a startAt
-      const startDate = new Date(`${startAt}:00`); // Añadir segundos para timestamp completo
-      const endDate = new Date(startDate.getTime() + (durationMinutes * 60 * 1000));
-      const endYear = endDate.getFullYear();
-      const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
-      const endDay = String(endDate.getDate()).padStart(2, '0');
-      const endHours = String(endDate.getHours()).padStart(2, '0');
-      const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
-      const endAt = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
-
       const newAssessment = {
         id: assessmentId,
         activityId,
@@ -266,8 +283,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
         title: assessmentTitle,
         durationMinutes: durationMinutes,
         startAt: startAt,
-        endAt: endAt,
-        gradesVisible: false, // Por defecto oculto, el profesor puede activarlo después
+        gradesVisible: assessmentGradesVisible,
         cancelled: false,
       };
 
@@ -283,7 +299,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       setShowCreateAssessmentModal(false);
       setAssessmentTitle('');
       setAssessmentDuration('');
-      setSendImmediately(true);
+      setAssessmentGradesVisible(false);
 
       // Abrir panel de evaluación
       setShowAssessments(true);
@@ -429,77 +445,234 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       </ScrollView>
 
       {/* Bottom Accordion Button and Panel - Fixed Position */}
-      {/* Bottom Fixed Buttons */}
-      <View style={styles.bottomContainer}>
-        <View style={styles.fixedButtonsContainer}>
-          {isTeacher ? (
-            <>
-              <TouchableOpacity
-                style={[styles.fixedButton, styles.sendEvaluationButton]}
-                onPress={() => setShowCreateAssessmentModal(true)}
-              >
-                <MaterialCommunityIcons name="send" size={20} color="#FFFFFF" />
-                <Text style={styles.fixedButtonText}>ENVIAR EVALUACIÓN</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.fixedButton, 
-                  styles.viewGradesButton,
-                  assessments.length === 0 && styles.fixedButtonDisabled
-                ]}
-                onPress={() => {
-                  if (assessments.length > 0) {
-                    const firstAssessment = assessments[0];
-                    const assessmentId = firstAssessment.id || firstAssessment._id || '';
-                    navigation.navigate('AssessmentGrades', {
-                      assessmentId: assessmentId,
-                      activityId: activityId,
-                    });
-                  }
-                }}
-                disabled={assessments.length === 0}
-              >
-                <MaterialCommunityIcons 
-                  name="chart-bar" 
-                  size={20} 
-                  color="#FFFFFF"
-                />
-                <Text style={styles.fixedButtonText}>
-                  VER NOTAS
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
+      {(assessments.length > 0 || isTeacher === true) && (
+        <View style={styles.bottomContainer}>
+          {/* Assessments Panel - Shows when expanded */}
+          {showAssessments && assessments.length > 0 && (
+            <View style={styles.assessmentsPanel}>
+              <ScrollView style={styles.assessmentsPanelScroll}>
+                <View style={styles.assessmentsPanelContent}>
+                    {assessments.map((assessment) => {
+                      const assessmentId = assessment.id || assessment._id || '';
+                      const timeRemaining = calculateTimeRemaining(assessment);
+                      const isFinished = timeRemaining === 'Tiempo Finalizado';
+                      const isCancelled = assessment.cancelled;
+
+                      return (
+                        <View key={assessmentId} style={[
+                          styles.assessmentCard,
+                          (isCancelled || isFinished) && styles.assessmentCardDisabled
+                        ]}>
+                          <View style={styles.assessmentCardHeader}>
+                            <MaterialCommunityIcons 
+                              name="clipboard-text" 
+                              size={24} 
+                              color={isCancelled || isFinished ? '#999999' : '#6C63FF'} 
+                            />
+                            <Text style={[
+                              styles.assessmentTitle,
+                              (isCancelled || isFinished) && styles.assessmentTitleDisabled
+                            ]}>
+                              {assessment.title}
+                            </Text>
+                          </View>
+
+                          <View style={styles.assessmentInfoRow}>
+                            <Text style={[
+                              styles.assessmentLabel,
+                              (isCancelled || isFinished) && styles.assessmentLabelDisabled
+                            ]}>
+                              Tiempo límite:
+                            </Text>
+                            <Text style={[
+                              styles.assessmentValue,
+                              (isCancelled || isFinished) && styles.assessmentValueDisabled
+                            ]}>
+                              {assessment.durationMinutes} minutos
+                            </Text>
+                          </View>
+
+                          <View style={styles.assessmentInfoRow}>
+                            <Text style={[
+                              styles.assessmentLabel,
+                              (isCancelled || isFinished) && styles.assessmentLabelDisabled
+                            ]}>
+                              Restante:
+                            </Text>
+                            <Text
+                              style={[
+                                styles.assessmentValue,
+                                (isFinished || isCancelled) && styles.assessmentValueFinished,
+                              ]}
+                            >
+                              {timeRemaining}
+                            </Text>
+                          </View>
+
+                          {isTeacher && (
+                            <View style={styles.assessmentInfoRow}>
+                              <Text style={styles.assessmentLabel}>Notas visibles:</Text>
+                              <Switch
+                                value={assessment.gradesVisible}
+                                onValueChange={(value) => handleToggleGradesVisible(assessment, value)}
+                                trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
+                                thumbColor={assessment.gradesVisible ? '#6C63FF' : '#F3F4F6'}
+                                disabled={isCancelled}
+                              />
+                            </View>
+                          )}
+
+                          <View style={styles.assessmentActions}>
+                            {isTeacher === true ? (
+                              <>
+                                <TouchableOpacity
+                                  style={styles.actionButton}
+                                  onPress={() => handleOpenEditAssessment(assessment)}
+                                >
+                                  <MaterialCommunityIcons name="pencil" size={20} color="#6C63FF" />
+                                  <Text style={styles.actionButtonText}>Editar</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  style={styles.actionButton}
+                                  onPress={() => {
+                                    navigation.navigate('TeacherGradesTable', {
+                                      assessmentId: assessmentId,
+                                      activityId: activityId,
+                                      courseId: courseId,
+                                    });
+                                  }}
+                                >
+                                  <MaterialCommunityIcons name="chart-bar" size={20} color="#6C63FF" />
+                                  <Text style={styles.actionButtonText}>Ver Notas</Text>
+                                </TouchableOpacity>
+
+                                {!isCancelled && (
+                                  <TouchableOpacity
+                                    style={[styles.actionButton, styles.cancelButton]}
+                                    onPress={() => handleCancelAssessment(assessment)}
+                                  >
+                                    <MaterialCommunityIcons name="close-circle" size={20} color="#E74C3C" />
+                                    <Text style={[styles.actionButtonText, styles.cancelButtonText]}>
+                                      Cancelar
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
+
+                                <TouchableOpacity
+                                  style={[styles.actionButton, styles.deleteButton]}
+                                  onPress={() => handleDeleteAssessment(assessment)}
+                                >
+                                  <MaterialCommunityIcons name="delete" size={20} color="#E74C3C" />
+                                  <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+                                    Eliminar
+                                  </Text>
+                                </TouchableOpacity>
+                              </>
+                            ) : isTeacher === false ? (
+                              <>
+                                {/* Botón Evaluar/Editar - Siempre visible pero bloqueado si está cancelada o finalizada */}
+                                {(() => {
+                                  const hasEvaluated = userEvaluations.get(assessmentId) || false;
+                                  return (
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.actionButton,
+                                        (isCancelled || isFinished) && styles.actionButtonDisabled
+                                      ]}
+                                      onPress={() => {
+                                        if (!isCancelled && !isFinished) {
+                                          navigation.navigate('PeerEvaluation', {
+                                            assessmentId: assessmentId,
+                                            activityId: activityId,
+                                            courseId: courseId,
+                                            isEditing: hasEvaluated,
+                                          });
+                                        }
+                                      }}
+                                      disabled={isCancelled || isFinished}
+                                    >
+                                      <MaterialCommunityIcons 
+                                        name={hasEvaluated ? "pencil" : "pencil-box"}
+                                        size={20} 
+                                        color={isCancelled || isFinished ? '#999999' : '#6C63FF'} 
+                                      />
+                                      <Text style={[
+                                        styles.actionButtonText,
+                                        (isCancelled || isFinished) && styles.actionButtonTextDisabled
+                                      ]}>
+                                        {hasEvaluated ? 'Editar Evaluación' : 'Evaluar'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  );
+                                })()}
+
+                                {/* Botón Ver Notas - Solo coloreado si gradesVisible está activado */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.actionButton,
+                                    !assessment.gradesVisible && styles.actionButtonDisabled
+                                  ]}
+                                  onPress={() => {
+                                    if (assessment.gradesVisible) {
+                                      navigation.navigate('StudentGrades', {
+                                        assessmentId: assessmentId,
+                                        activityId: activityId,
+                                        courseId: courseId,
+                                      });
+                                    }
+                                  }}
+                                  disabled={!assessment.gradesVisible}
+                                >
+                                  <MaterialCommunityIcons 
+                                    name="chart-bar" 
+                                    size={20} 
+                                    color={assessment.gradesVisible ? '#6C63FF' : '#999999'} 
+                                  />
+                                  <Text style={[
+                                    styles.actionButtonText,
+                                    !assessment.gradesVisible && styles.actionButtonTextDisabled
+                                  ]}>
+                                    Ver Notas
+                                  </Text>
+                                </TouchableOpacity>
+                              </>
+                            ) : null}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Toggle Button */}
             <TouchableOpacity
-              style={[styles.fixedButton, styles.viewGradesButtonStudent]}
+              style={styles.toggleAssessmentsButton}
               onPress={() => {
-                if (assessments.length > 0 && assessments[0].gradesVisible) {
-                  const firstAssessment = assessments[0];
-                  const assessmentId = firstAssessment.id || firstAssessment._id || '';
-                  navigation.navigate('AssessmentGrades', {
-                    assessmentId: assessmentId,
-                    activityId: activityId,
-                  });
+                // Si no hay evaluaciones y es profesor, abrir modal de crear evaluación
+                if (assessments.length === 0 && isTeacher) {
+                  setShowCreateAssessmentModal(true);
+                } else {
+                  setShowAssessments(!showAssessments);
                 }
               }}
-              disabled={assessments.length === 0 || !assessments[0]?.gradesVisible}
             >
-              <MaterialCommunityIcons 
-                name="chart-bar" 
-                size={20} 
-                color={(assessments.length === 0 || !assessments[0]?.gradesVisible) ? '#999999' : '#FFFFFF'} 
+              <MaterialCommunityIcons
+                name={assessments.length === 0 && isTeacher ? 'plus-circle' : (showAssessments ? 'chevron-down' : 'chevron-up')}
+                size={24}
+                color="#FFFFFF"
               />
-              <Text style={[
-                styles.fixedButtonText,
-                (assessments.length === 0 || !assessments[0]?.gradesVisible) && styles.fixedButtonDisabled
-              ]}>
-                VER NOTAS
+              <Text style={styles.toggleAssessmentsText}>
+                {assessments.length === 0 && isTeacher 
+                  ? 'Iniciar evaluación' 
+                  : (showAssessments ? 'Ocultar evaluación' : 'Ver evaluación')
+                }
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          </View>
+        )}
 
       {/* Modal para crear evaluación */}
       <Modal
@@ -525,12 +698,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                 </TouchableOpacity>
               </View>
 
-              <ScrollView
-                style={[styles.modalBodyScroll, { maxHeight: SCREEN_HEIGHT * 0.65 }]}
-                contentContainerStyle={styles.modalBody}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
+              <View style={styles.modalBody}>
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Nombre de la evaluación</Text>
                   <TextInput
@@ -553,7 +721,19 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                     placeholderTextColor="#999999"
                   />
                 </View>
-              </ScrollView>
+
+                <View style={styles.inputGroup}>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.inputLabel}>Notas visibles</Text>
+                    <Switch
+                      value={assessmentGradesVisible}
+                      onValueChange={setAssessmentGradesVisible}
+                      trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
+                      thumbColor={assessmentGradesVisible ? '#6C63FF' : '#F3F4F6'}
+                    />
+                  </View>
+                </View>
+              </View>
 
               <View style={styles.modalFooter}>
                 <TouchableOpacity
@@ -592,12 +772,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                 </TouchableOpacity>
               </View>
 
-              <ScrollView
-                style={[styles.modalBodyScroll, { maxHeight: SCREEN_HEIGHT * 0.65 }]}
-                contentContainerStyle={styles.modalBody}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
+              <View style={styles.modalBody}>
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Título de la evaluación</Text>
                   <TextInput
@@ -632,7 +807,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                     />
                   </View>
                 </View>
-              </ScrollView>
+              </View>
 
               <View style={styles.modalFooter}>
                 <TouchableOpacity
@@ -811,77 +986,16 @@ const styles = StyleSheet.create({
   assessmentsPanelContent: {
     padding: 16,
   },
-  noAssessmentsContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  noAssessmentsText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#636E72',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  createFirstAssessmentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 20,
-    backgroundColor: '#6C63FF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  createFirstAssessmentButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  assessmentSummaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  assessmentSummaryText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#4C46B6',
-    lineHeight: 18,
-  },
-  fixedButtonsContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  fixedButton: {
-    flex: 1,
+  toggleAssessmentsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: '#6C63FF',
+    paddingVertical: 16,
     gap: 8,
   },
-  fixedButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.6,
-  },
-  sendEvaluationButton: {
-    backgroundColor: '#6C63FF',
-  },
-  viewGradesButton: {
-    backgroundColor: '#27AE60',
-  },
-  viewGradesButtonStudent: {
-    backgroundColor: '#6C63FF',
-  },
-  fixedButtonText: {
-    fontSize: 14,
+  toggleAssessmentsText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -982,25 +1096,6 @@ const styles = StyleSheet.create({
   actionButtonTextDisabled: {
     color: '#999999',
   },
-  highlightButton: {
-    backgroundColor: '#6C63FF',
-    borderColor: '#6C63FF',
-  },
-  highlightButtonText: {
-    color: '#FFFFFF',
-  },
-  visibilityActiveButton: {
-    borderColor: '#27AE60',
-  },
-  visibilityActiveText: {
-    color: '#27AE60',
-  },
-  visibilityInactiveButton: {
-    borderColor: '#E67E22',
-  },
-  visibilityInactiveText: {
-    color: '#E67E22',
-  },
   cancelButton: {
     borderColor: '#E74C3C',
   },
@@ -1050,9 +1145,6 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
-  },
-  modalBodyScroll: {
-    width: '100%',
   },
   inputGroup: {
     marginBottom: 20,

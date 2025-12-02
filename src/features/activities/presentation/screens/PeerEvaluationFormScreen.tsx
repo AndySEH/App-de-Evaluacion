@@ -182,7 +182,7 @@ export default function PeerEvaluationFormScreen({ route, navigation }: { route:
 
   const handleSelectMember = (member: AuthUser) => {
     const userId = user?._id || user?.id || user?.uid || '';
-    const memberId = member._id || member.id || member.uid || '';
+    const memberId = member.id || member.userId || '';
     
     // Verificar si ya evaluó a este compañero
     const alreadyEvaluated = existingEvaluations.some(

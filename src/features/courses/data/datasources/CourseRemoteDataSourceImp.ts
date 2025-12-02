@@ -177,7 +177,9 @@ export class CourseRemoteDataSourceImp implements CourseDataSource {
     if (response.status === 200) {
       const data: Course[] = await response.json();
       const result = data.length > 0 ? data[0] : undefined;
-      console.log('[API] GET Course by ID - Result:', result);
+      console.log('[API] GET Course by ID - Raw result:', result);
+      console.log('[API] GET Course by ID - teacherId value:', result?.teacherId);
+      console.log('[API] GET Course by ID - All keys:', result ? Object.keys(result) : 'no result');
       return result;
     } else if (response.status === 401) {
       console.error('[API] GET Course by ID - Error:', response.status, 'Unauthorized');

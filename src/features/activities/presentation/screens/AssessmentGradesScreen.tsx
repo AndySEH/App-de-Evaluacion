@@ -90,7 +90,7 @@ export default function AssessmentGradesScreen({ route, navigation }: { route: a
 
       // Calcular calificaciones por estudiante
       const gradesData: StudentGrade[] = students.map(student => {
-        const studentId = student._id || student.id || student.uid || '';
+        const studentId = student.id || student.userId;
         
         // Obtener todas las evaluaciones recibidas por este estudiante
         const receivedEvaluations = evaluations.filter(

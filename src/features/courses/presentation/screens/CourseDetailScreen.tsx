@@ -1144,7 +1144,7 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
                   onPress={() => {
                     navigation.navigate('ActivityDetail', { 
                       activityId: activityIdToUse,
-                      courseId: course._id || course.id
+                      courseId: course.id || course.id
                     });
                   }}
                 >

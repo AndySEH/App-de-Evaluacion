@@ -73,7 +73,20 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
     }
 
     const data = await response.json();
-    console.log('[API] GET Peer Evaluations by Assessment - Result:', data);
+    console.log('[API] GET Peer Evaluations by Assessment - Result:', JSON.stringify(data, null, 2));
+    console.log('[API] GET Peer Evaluations by Assessment - Number of evaluations:', data.length);
+    
+    // Log cada evaluación individual
+    data.forEach((ev: any, idx: number) => {
+      console.log(`[API] Evaluation ${idx}:`, {
+        evaluatorId: ev.evaluatorId,
+        evaluateeId: ev.evaluateeId,
+        _id: ev._id,
+        id: ev.id,
+        allKeys: Object.keys(ev)
+      });
+    });
+    
     return data as PeerEvaluation[];
   }
 
@@ -98,26 +111,69 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
   }
 
   async addPeerEvaluation(peerEvaluation: NewPeerEvaluation): Promise<void> {
-    console.log('[API] POST Add Peer Evaluation - Params:', { peerEvaluation, table: this.table });
+    console.log('========================================');
+    console.log('[API] POST Add Peer Evaluation - START');
+    console.log('========================================');
+    console.log('[API] POST Add Peer Evaluation - Params:', JSON.stringify(peerEvaluation, null, 2));
+    console.log('[API] POST Add Peer Evaluation - Table:', this.table);
+    
     const url = `${this.baseUrl}/insert`;
     const body = JSON.stringify({ tableName: this.table, records: [peerEvaluation] });
+    
+    console.log('[API] POST Add Peer Evaluation - URL:', url);
+    console.log('[API] POST Add Peer Evaluation - Body:', body);
+    console.log('[API] POST Add Peer Evaluation - Calling authorizedFetch...');
 
-    const response = await this.authorizedFetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
+    let response;
+    try {
+      response = await this.authorizedFetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      console.log('[API] POST Add Peer Evaluation - authorizedFetch completed');
+    } catch (error) {
+      console.error('[API] POST Add Peer Evaluation - authorizedFetch error:', error);
+      throw error;
+    }
+
+    console.log('[API] POST Add Peer Evaluation - Response Status:', response.status);
+    console.log('[API] POST Add Peer Evaluation - Response OK:', response.ok);
+    
+    let responseText = '';
+    try {
+      responseText = await response.text();
+      console.log('[API] POST Add Peer Evaluation - Response Body (raw):', responseText);
+    } catch (error) {
+      console.error('[API] POST Add Peer Evaluation - Error reading response text:', error);
+    }
 
     if (response.status === 201) {
-      console.log('[API] POST Add Peer Evaluation - Result: Success');
+      console.log('[API] POST Add Peer Evaluation - Status 201 - Success branch');
+      let responseData;
+      try {
+        responseData = responseText ? JSON.parse(responseText) : {};
+        console.log('[API] POST Add Peer Evaluation - Response Body (parsed JSON):', JSON.stringify(responseData, null, 2));
+      } catch (e) {
+        console.log('[API] POST Add Peer Evaluation - Could not parse response as JSON:', e);
+      }
+      console.log('[API] POST Add Peer Evaluation - Result: Success - END');
+      console.log('========================================');
       return Promise.resolve();
     }
     if (response.status === 401) {
-      console.error('[API] POST Add Peer Evaluation - Error:', response.status, 'Unauthorized');
+      console.error('[API] POST Add Peer Evaluation - Error: 401 Unauthorized');
       throw new Error("Unauthorized");
     }
-    const errorBody = await response.json().catch(() => ({}));
-    console.error('[API] POST Add Peer Evaluation - Error:', response.status, errorBody);
+    
+    let errorBody;
+    try {
+      errorBody = responseText ? JSON.parse(responseText) : {};
+    } catch (e) {
+      errorBody = { rawResponse: responseText };
+    }
+    console.error('[API] POST Add Peer Evaluation - Error Status:', response.status);
+    console.error('[API] POST Add Peer Evaluation - Error Body:', errorBody);
     throw new Error(`Error adding peer evaluation: ${response.status} - ${errorBody.message ?? "Unknown error"}`);
   }
 
@@ -126,7 +182,7 @@ export class PeerEvaluationRemoteDataSourceImp implements PeerEvaluationDataSour
     const url = `${this.baseUrl}/update`;
     const body = JSON.stringify({
       tableName: this.table,
-      idColumn: "id",
+      idColumn: "_id",
       idValue: id,
       updates,
     });

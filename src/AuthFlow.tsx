@@ -3,6 +3,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import ActivityDetailScreen from "./features/activities/presentation/screens/ActivityDetailScreen";
 import AssessmentGradesScreen from "./features/activities/presentation/screens/AssessmentGradesScreen";
 import PeerEvaluationFormScreen from "./features/activities/presentation/screens/PeerEvaluationFormScreen";
+import PeerEvaluationScreen from "./features/activities/presentation/screens/PeerEvaluationScreen";
 import StudentGradesScreen from "./features/activities/presentation/screens/StudentGradesScreen";
 import TeacherGradesTableScreen from "./features/activities/presentation/screens/TeacherGradesTableScreen";
 import { useAuth } from "./features/auth/presentation/context/authContext";
@@ -89,6 +90,14 @@ export default function AuthFlow() {
           <Stack.Screen
             name="PeerEvaluationForm"
             component={PeerEvaluationFormScreen}
+            options={{
+              title: "Evaluar Compañeros",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="PeerEvaluation"
+            component={PeerEvaluationScreen}
             options={{
               title: "Evaluar Compañeros",
               headerShown: false,
