@@ -399,6 +399,74 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
     }
   };
 
+  const handleJoinGroup = async (group: Group) => {
+    if (!user) return;
+    
+    try {
+      const userId = user._id || user.id || '';
+      const groupId = group.id || group._id || '';
+      
+      // Verificar si el usuario ya está en este grupo (para salir)
+      if (isUserInGroup(group)) {
+        // Salir del grupo actual
+        const currentMemberIds = getMemberIds(group);
+        const updatedMemberIds = currentMemberIds.filter(id => id !== userId);
+        
+        await updateGroupUC.execute(groupId, {
+          memberIds: updatedMemberIds
+        });
+      } else {
+        // Verificar si el usuario ya está en otro grupo de esta categoría
+        const userCurrentGroup = groups.find(g => {
+          const memberIds = getMemberIds(g);
+          return memberIds.includes(userId);
+        });
+
+        // Si ya está en un grupo, primero salir de ese grupo
+        if (userCurrentGroup) {
+          const currentGroupId = userCurrentGroup.id || userCurrentGroup._id || '';
+          const currentMemberIds = getMemberIds(userCurrentGroup);
+          const updatedCurrentMemberIds = currentMemberIds.filter(id => id !== userId);
+          
+          await updateGroupUC.execute(currentGroupId, {
+            memberIds: updatedCurrentMemberIds
+          });
+        }
+
+        // Agregar al nuevo grupo
+        const currentMemberIds = getMemberIds(group);
+        const updatedMemberIds = [...currentMemberIds, userId];
+        
+        await updateGroupUC.execute(groupId, {
+          memberIds: updatedMemberIds
+        });
+      }
+
+      // Recargar grupos
+      const categoryIdToUse = category?.id || category?._id || '';
+      const updatedGroups = await getGroupsByCategoryUC.execute(categoryIdToUse);
+      setGroups(updatedGroups);
+    } catch (error) {
+      console.error('[CategoryDetailScreen] Error joining group:', error);
+    }
+  };
+
+  const isUserInGroup = (group: Group): boolean => {
+    if (!user) return false;
+    const userId = user._id || user.id || '';
+    const memberIds = getMemberIds(group);
+    return memberIds.includes(userId);
+  };
+
+  const isUserInAnyGroup = (): boolean => {
+    if (!user) return false;
+    const userId = user._id || user.id || '';
+    return groups.some(g => {
+      const memberIds = getMemberIds(g);
+      return memberIds.includes(userId);
+    });
+  };
+
 
 
   const getMemberIds = (group: Group): string[] => {
@@ -557,6 +625,35 @@ export default function CategoryDetailScreen({ route, navigation }: { route: any
                 <Text style={styles.groupFooterText}>
                   {memberIds.length} {memberIds.length === 1 ? 'integrante' : 'integrantes'}
                 </Text>
+                
+                {/* Botón de Unirse/Salir - Solo para estudiantes en categorías libres */}
+                {!isTeacher && !category.randomGroups && (
+                  <TouchableOpacity
+                    style={[
+                      styles.joinButton,
+                      // Si está en este grupo, mostrar como botón de salir
+                      isUserInGroup(group) && styles.leaveButton,
+                      // Si está en otro grupo y este no es su grupo, deshabilitar
+                      (isUserInAnyGroup() && !isUserInGroup(group)) && styles.joinButtonDisabled,
+                      // Si el grupo está lleno y no es su grupo, deshabilitar
+                      (isGroupFull(group) && !isUserInGroup(group)) && styles.joinButtonDisabled,
+                    ]}
+                    onPress={() => handleJoinGroup(group)}
+                    disabled={(isUserInAnyGroup() && !isUserInGroup(group)) || (isGroupFull(group) && !isUserInGroup(group))}
+                  >
+                    <MaterialCommunityIcons 
+                      name={isUserInGroup(group) ? "exit-to-app" : "account-plus"} 
+                      size={18} 
+                      color="#FFFFFF" 
+                    />
+                    <Text style={styles.joinButtonText}>
+                      {isUserInGroup(group) 
+                        ? 'Salir del grupo' 
+                        : (isUserInAnyGroup() ? 'Ya estás en un grupo' : isGroupFull(group) ? 'Grupo lleno' : 'Unirse')
+                      }
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )})
@@ -1008,5 +1105,31 @@ const styles = StyleSheet.create({
   studentOptionEmail: {
     fontSize: 13,
     color: '#95A5A6',
+  },
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#5B8DEF',
+    marginTop: 12,
+  },
+  joinButtonDisabled: {
+    backgroundColor: '#B0BEC5',
+    opacity: 0.6,
+  },
+  joinButtonActive: {
+    backgroundColor: '#27AE60',
+  },
+  leaveButton: {
+    backgroundColor: '#E74C3C',
+  },
+  joinButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

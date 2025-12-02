@@ -3,6 +3,7 @@ import { TOKENS } from "@/src/core/di/tokens";
 import { useAuth } from "@/src/features/auth/presentation/context/authContext";
 import { Category } from "@/src/features/courses/domain/entities/Category";
 import { GetCategoryByIdUseCase } from "@/src/features/courses/domain/usecases/GetCategoryByIdUseCase";
+import { GetCourseByIdUseCase } from "@/src/features/courses/domain/usecases/GetCourseByIdUseCase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
@@ -38,6 +39,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
   const updateAssessmentUC = di.resolve<UpdateAssessmentUseCase>(TOKENS.UpdateAssessmentUC);
   const deleteAssessmentUC = di.resolve<DeleteAssessmentUseCase>(TOKENS.DeleteAssessmentUC);
   const getCategoryByIdUC = di.resolve<GetCategoryByIdUseCase>(TOKENS.GetCategoryByIdUC);
+  const getCourseByIdUC = di.resolve<GetCourseByIdUseCase>(TOKENS.GetCourseByIdUC);
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
@@ -53,6 +55,11 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
   const loadActivityData = async () => {
     try {
       setLoading(true);
+      
+      // Cargar curso para verificar si es profesor
+      const courseData = await getCourseByIdUC.execute(courseId);
+      const userIsTeacher = courseData?.teacherId === (user?._id || user?.id);
+      setIsTeacher(userIsTeacher);
       
       // Cargar actividad
       const activityData = await getActivityByIdUC.execute(activityId);
@@ -71,10 +78,6 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       // Cargar evaluaciones
       const assessmentsData = await getAssessmentsByActivityUC.execute(activityId);
       setAssessments(assessmentsData);
-
-      // Verificar si el usuario es profesor del curso
-      // Aquí podrías hacer una verificación más robusta con el courseId
-      setIsTeacher(true); // Por ahora asumimos que es profesor
 
     } catch (error) {
       console.error('[ActivityDetailScreen] Error loading activity:', error);
@@ -175,6 +178,22 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
       <View style={styles.errorContainer}>
         <MaterialCommunityIcons name="alert-circle" size={64} color="#FF6B6B" />
         <Text style={styles.errorText}>No se pudo cargar la actividad</Text>
+      </View>
+    );
+  }
+
+  // Si el usuario es estudiante y la actividad no es visible, mostrar mensaje de acceso denegado
+  if (!isTeacher && !activity.visible) {
+    return (
+      <View style={styles.errorContainer}>
+        <MaterialCommunityIcons name="eye-off" size={64} color="#95A5A6" />
+        <Text style={styles.errorText}>Esta actividad no está disponible</Text>
+        <TouchableOpacity
+          style={styles.backToListButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backToListButtonText}>Volver</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -298,7 +317,7 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                           )}
 
                           <View style={styles.assessmentActions}>
-                            {isTeacher && (
+                            {isTeacher ? (
                               <>
                                 <TouchableOpacity
                                   style={styles.actionButton}
@@ -331,6 +350,36 @@ export default function ActivityDetailScreen({ route, navigation }: { route: any
                                     <Text style={[styles.actionButtonText, styles.cancelButtonText]}>
                                       Cancelar
                                     </Text>
+                                  </TouchableOpacity>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {/* Botón Evaluar - Visible para estudiantes */}
+                                {!isCancelled && !isFinished && (
+                                  <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => {
+                                      // Navegar a realizar evaluación
+                                      console.log('Start assessment:', assessmentId);
+                                    }}
+                                  >
+                                    <MaterialCommunityIcons name="pencil-box" size={20} color="#6C63FF" />
+                                    <Text style={styles.actionButtonText}>Evaluar</Text>
+                                  </TouchableOpacity>
+                                )}
+
+                                {/* Botón Ver Notas - Solo visible si gradesVisible está activado */}
+                                {assessment.gradesVisible && (
+                                  <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => {
+                                      // Navegar a ver notas
+                                      console.log('View grades:', assessmentId);
+                                    }}
+                                  >
+                                    <MaterialCommunityIcons name="chart-bar" size={20} color="#6C63FF" />
+                                    <Text style={styles.actionButtonText}>Ver Notas</Text>
                                   </TouchableOpacity>
                                 )}
                               </>
@@ -391,6 +440,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#FF6B6B',
     textAlign: 'center',
+  },
+  backToListButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: '#6C63FF',
+    borderRadius: 8,
+  },
+  backToListButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   headerWrapper: {
     backgroundColor: '#6C63FF',

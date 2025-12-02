@@ -824,15 +824,21 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
     </>
   );
 
-  const renderActivities = () => (
-    <>
-      {activities.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="clipboard-text-outline" size={64} color="#CCCCCC" />
-          <Text style={styles.emptyStateText}>No hay actividades registradas</Text>
-        </View>
-      ) : (
-        activities.map((activity) => {
+  const renderActivities = () => {
+    // Filtrar actividades según el rol del usuario
+    const visibleActivities = isTeacher 
+      ? activities 
+      : activities.filter(activity => activity.visible !== false);
+    
+    return (
+      <>
+        {visibleActivities.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="clipboard-text-outline" size={64} color="#CCCCCC" />
+            <Text style={styles.emptyStateText}>No hay actividades registradas</Text>
+          </View>
+        ) : (
+          visibleActivities.map((activity) => {
           const activityIdToUse = activity.id || activity._id || '';
           const hasActiveAssessment = activityAssessments[activityIdToUse] || false;
           
@@ -931,7 +937,8 @@ export default function CourseDetailScreen({ route, navigation }: { route: any; 
         })
       )}
     </>
-  );
+    );
+  };
 
   const renderStudents = () => (
     <>
